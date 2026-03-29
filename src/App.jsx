@@ -1,284 +1,720 @@
-import { useState } from "react";
+import { createElement, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
-/* ── Design Tokens (from Figma) ── */
-const T = {
-  font: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-  white: "#fff",
-  black: "#000",
-  gray100: "#f5f5f5",
-  gray200: "#ebebeb",
-  gray300: "#e0e0e0",
-  gray400: "#8f8f8f",
-  gray500: "#666",
-  gray600: "#3d3d3d",
-  accent: "#0072e0",
-  border: "rgba(0,0,0,0.08)",
-  borderMid: "rgba(0,0,0,0.12)",
-  shadow: "0 2px 4px -2px rgba(0,0,0,0.12)",
-  radius: { sm: 4, md: 6, lg: 8 },
-};
+import avtrImg from "./assets/avtr.png";
+import AccountSettingsGlyph from "./assets/icons/account-settings.svg?react";
+import BankMidsGlyph from "./assets/icons/bank-mids.svg?react";
+import BillingGlyph from "./assets/icons/billing.svg?react";
+import ChevronDownGlyph from "./assets/icons/chevron-down.svg?react";
+import ChevronVerticalGlyph from "./assets/icons/chevron-vertical.svg?react";
+import DashboardGlyph from "./assets/icons/dashboard.svg?react";
+import DevelopersGlyph from "./assets/icons/developers.svg?react";
+import ExternalLinkGlyph from "./assets/icons/external-link.svg?react";
+import FinancesGlyph from "./assets/icons/finances.svg?react";
+import FraudPreventionGlyph from "./assets/icons/fraud-prevention.svg?react";
+import PaymentsGlyph from "./assets/icons/payments.svg?react";
+import ReportsExportsGlyph from "./assets/icons/reports-exports.svg?react";
+import RouteGlyph from "./assets/icons/route.svg?react";
+import SearchGlyph from "./assets/icons/search.svg?react";
+import SidebarCollapseGlyph from "./assets/icons/sidebar-collapse.svg?react";
+import SidebarExpandGlyph from "./assets/icons/sidebar-expand.svg?react";
+import TaxesGlyph from "./assets/icons/taxes.svg?react";
 
-/* ── Inline SVG Icons ── */
-const icons = {
-  search: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5.5" stroke="#8f8f8f" strokeWidth="1.5"/><path d="M11 11L14 14" stroke="#8f8f8f" strokeWidth="1.5" strokeLinecap="round"/></svg>
-  ),
-  chevronDown: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-  ),
-  chevronUpDown: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M5 6.5L8 3.5L11 6.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M5 9.5L8 12.5L11 9.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-  ),
-  inbox: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 9h3.5L7 11h2l1.5-2H14M2 9V12.5C2 13.3 2.7 14 3.5 14h9c.8 0 1.5-.7 1.5-1.5V9M2 9L4 3.5C4.2 3 4.6 2.5 5.2 2.5h5.6c.6 0 1 .4 1.2 1L14 9" stroke="#3d3d3d" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-  ),
-  dashboard: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="5" height="5" rx="1" stroke="#3d3d3d" strokeWidth="1.2"/><rect x="9" y="2" width="5" height="5" rx="1" stroke="#3d3d3d" strokeWidth="1.2"/><rect x="2" y="9" width="5" height="5" rx="1" stroke="#3d3d3d" strokeWidth="1.2"/><rect x="9" y="9" width="5" height="5" rx="1" stroke="#3d3d3d" strokeWidth="1.2"/></svg>
-  ),
-  payments: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="3" width="13" height="10" rx="1.5" stroke="#3d3d3d" strokeWidth="1.2"/><path d="M1.5 6.5h13" stroke="#3d3d3d" strokeWidth="1.2"/></svg>
-  ),
-  bank: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 6L8 2L14 6M3 7v5M6.5 7v5M9.5 7v5M13 7v5M1 13h14" stroke="#3d3d3d" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-  ),
-  route: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="4" cy="4" r="2.5" stroke="#3d3d3d" strokeWidth="1.2"/><circle cx="12" cy="12" r="2.5" stroke="#3d3d3d" strokeWidth="1.2"/><path d="M6.5 4H11c1.7 0 3 1.3 3 3v0c0 1.7-1.3 3-3 3H5" stroke="#3d3d3d" strokeWidth="1.2" strokeLinecap="round"/></svg>
-  ),
-  billing: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 1.5v13l2-1.5 2 1.5 2-1.5 2 1.5v-13l-2 1.5-2-1.5-2 1.5-2-1.5z" stroke="#3d3d3d" strokeWidth="1.2" strokeLinejoin="round"/><path d="M6.5 6h3M6.5 9h3" stroke="#3d3d3d" strokeWidth="1.2" strokeLinecap="round"/></svg>
-  ),
-  shield: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1.5L2.5 4v4c0 3.5 2.5 5.5 5.5 6.5 3-1 5.5-3 5.5-6.5V4L8 1.5z" stroke="#3d3d3d" strokeWidth="1.2" strokeLinejoin="round"/></svg>
-  ),
-  wallet: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="3.5" width="12" height="9" rx="1.5" stroke="#3d3d3d" strokeWidth="1.2"/><path d="M11 8.5h1" stroke="#3d3d3d" strokeWidth="1.5" strokeLinecap="round"/><path d="M2 6.5h12" stroke="#3d3d3d" strokeWidth="1.2"/></svg>
-  ),
-  taxes: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#3d3d3d" strokeWidth="1.2"/><path d="M5.5 5.5l5 5M5.5 8a.5.5 0 100-1 .5.5 0 000 1zM10.5 9a.5.5 0 100-1 .5.5 0 000 1z" stroke="#3d3d3d" strokeWidth="1.2"/></svg>
-  ),
-  reports: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 12V7M8 12V4M12 12V9" stroke="#3d3d3d" strokeWidth="1.5" strokeLinecap="round"/></svg>
-  ),
-  code: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M5 4L1.5 8 5 12M11 4l3.5 4L11 12" stroke="#3d3d3d" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-  ),
-  settings: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2" stroke="#3d3d3d" strokeWidth="1.2"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41" stroke="#3d3d3d" strokeWidth="1.2" strokeLinecap="round"/></svg>
-  ),
-  filters: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M4 8h8M6 12h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-  ),
-  columns: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="4" height="12" rx="1" stroke="currentColor" strokeWidth="1.2"/><rect x="10" y="2" width="4" height="12" rx="1" stroke="currentColor" strokeWidth="1.2"/></svg>
-  ),
-  export: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2v8M5 5l3-3 3 3M3 11v2h10v-2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-  ),
-  link: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 10l4-4M7 4.5L9 2.5a2.12 2.12 0 013 3L10 7.5M6 8.5L4 10.5a2.12 2.12 0 003 3L9 11.5" stroke="#0072e0" strokeWidth="1.2" strokeLinecap="round"/></svg>
-  ),
-};
+import {
+  NAV_SECTIONS,
+  SKIP_RECENT_IDS,
+  buildSearchIndex,
+  findParentGroupId,
+  getMetaForId,
+} from "./navConfig.js";
 
-/* ── Navigation Data ── */
-const NAV = [
-  { label: "Dashboard", icon: "dashboard" },
-  { label: "Payments", icon: "payments", chevron: true },
-  { label: "Bank MIDs", icon: "bank", chevron: true },
-  { label: "Orchestration", icon: "route", chevron: true },
-  { label: "Billing", icon: "billing", chevron: true },
-  { label: "Fraud prevention", icon: "shield", chevron: true },
-  { label: "Finances", icon: "wallet", chevron: true },
-  { label: "Taxes", icon: "taxes", chevron: true },
-  { label: "Reports&Exports", icon: "reports", chevron: true },
-  { label: "Developers", icon: "code", chevron: true },
-  { label: "Account settings", icon: "settings", chevron: true },
-];
-
-/* ── Table Columns ── */
-const COLUMNS = [
-  { label: "Order ID", width: 160 },
-  { label: "Channel", width: 88 },
-  { label: "Amount", width: 112 },
-  { label: "Description", width: 160 },
-  { label: "Status", width: 120 },
-  { label: "Substatus", width: 120 },
-  { label: "Created date", width: 192 },
-  { label: "Payment type", width: 160 },
-  { label: "Payment method", width: 160 },
-];
-
-/* ── Mock Table Data ── */
-const ROWS = Array.from({ length: 14 }, (_, i) => ({
-  id: `${Math.floor(Math.random() * 9e15).toString().padStart(16, "0")}`,
-  channel: "–",
-  amount: `${(10 + Math.random() * 20).toFixed(2)} USD`,
-  desc: "transaction description...",
-  status: i % 3 === 0 ? "Refund" : "Settled",
-  substatus: i % 3 === 0 ? "Refund" : "Settled",
-  date: `Mar ${String(i + 1).padStart(2, "0")}, 2023 ${String(7 + (i % 12)).padStart(2, "0")}:${String(i * 7 % 60).padStart(2, "0")}`,
-  payType: "Recurring",
-  payMethod: "Card ****1234",
-}));
-
-/* ── Skeleton bar (placeholder for table content like in Figma) ── */
-function Skel({ w }) {
-  return <div style={{ width: w, height: 4, borderRadius: 2, background: "#ddd" }} />;
+/** Inline calendar icon for date filter fields (Figma: calendar on date inputs) */
+function CalendarGlyph({ className }) {
+  return (
+    <svg
+      className={className}
+      width={16}
+      height={16}
+      viewBox="0 0 16 16"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden
+    >
+      <path
+        d="M5 1.5v1M11 1.5v1M2.75 6.25h10.5M4 2.75h8a1.25 1.25 0 011.25 1.25v8a1.25 1.25 0 01-1.25 1.25H4A1.25 1.25 0 012.75 12V4A1.25 1.25 0 014 2.75z"
+        stroke="currentColor"
+        strokeWidth="1.25"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 }
 
-/* ── App ── */
-export default function App() {
-  const [activeNav] = useState("Payments");
+const FILTER_FIELDS = [
+  { id: "order-id", label: "Order ID", kind: "text" },
+  { id: "email", label: "Email", kind: "text" },
+  { id: "created-from", label: "Created at from", kind: "date" },
+  { id: "created-to", label: "Created at to", kind: "date" },
+  { id: "updated-from", label: "Updated at from", kind: "date" },
+  { id: "updated-to", label: "Updated at to", kind: "date" },
+  { id: "channel", label: "Channel", kind: "select" },
+  { id: "amount", label: "Amount", kind: "amount" },
+  { id: "currency", label: "Currency", kind: "select" },
+  { id: "customer-id", label: "Customer ID", kind: "text" },
+  { id: "status", label: "Status", kind: "select" },
+  { id: "refund", label: "Refund", kind: "select" },
+  { id: "cardholder", label: "Cardholder name", kind: "text" },
+  { id: "descriptor", label: "Descriptor", kind: "text" },
+];
 
-  const s = {
-    label: { fontFamily: T.font, fontSize: 14, fontWeight: 500, lineHeight: "24px", margin: 0 },
-    caption: { fontFamily: T.font, fontSize: 12, fontWeight: 400, lineHeight: "16px", letterSpacing: 0.12, margin: 0 },
-    title: { fontFamily: T.font, fontSize: 21, fontWeight: 600, lineHeight: "32px", letterSpacing: -0.21, margin: 0 },
-  };
+const RECENT_STORAGE_KEY = "merchant-hub-recent-v1";
+const SIDEBAR_SESSION_KEY = "merchant-hub-sidebar-collapsed";
+const RECENT_MAX = 7;
+
+function readSidebarCollapsed() {
+  if (typeof sessionStorage === "undefined") return false;
+  try {
+    return sessionStorage.getItem(SIDEBAR_SESSION_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+const ICON_GLYPH = {
+  dashboard: DashboardGlyph,
+  payments: PaymentsGlyph,
+  orchestration: RouteGlyph,
+  bankMids: BankMidsGlyph,
+  billing: BillingGlyph,
+  fraudPrevention: FraudPreventionGlyph,
+  finances: FinancesGlyph,
+  developers: DevelopersGlyph,
+  reportsExports: ReportsExportsGlyph,
+  taxes: TaxesGlyph,
+  accountSettings: AccountSettingsGlyph,
+};
+
+/** SVG icons from ./assets/icons (vite-plugin-svgr); color via CSS currentColor */
+function SideIcon({ icon, className = "", size = 16 }) {
+  return createElement(icon, {
+    className: ["icon", className].filter(Boolean).join(" "),
+    width: size,
+    height: size,
+    "aria-hidden": true,
+  });
+}
+
+function renderFilterInput(field) {
+  switch (field.kind) {
+    case "date":
+      return (
+        <>
+          <input type="text" readOnly placeholder="DD / MM / YYYY" />
+          <CalendarGlyph className="icon" />
+        </>
+      );
+    case "select":
+      return (
+        <>
+          <input type="text" readOnly placeholder="Select" />
+          <SideIcon icon={ChevronDownGlyph} />
+        </>
+      );
+    case "amount":
+      return (
+        <>
+          <div className="unit-textfield__split unit-textfield__split--compare">
+            <span className="unit-textfield__split-label">Compare</span>
+            <SideIcon icon={ChevronDownGlyph} />
+          </div>
+          <div className="unit-textfield__split unit-textfield__split--main">
+            <input type="text" readOnly placeholder="Amount" />
+          </div>
+        </>
+      );
+    default:
+      return <input type="text" readOnly />;
+  }
+}
+
+const CHART_BAR_HEIGHTS = [45, 70, 55, 90, 65, 80, 50, 75, 60, 85, 40, 70];
+
+const SK_TABLE_ROWS = [
+  [55, 70, 60, 50, 40],
+  [80, 45, 75, 60, 35],
+  [65, 80, 50, 70, 55],
+  [70, 55, 65, 45, 40],
+  [50, 65, 80, 55, 45],
+  [75, 40, 60, 70, 50],
+];
+
+function loadRecent() {
+  try {
+    const raw = localStorage.getItem(RECENT_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((x) => x?.id && x?.label) : [];
+  } catch {
+    return [];
+  }
+}
+
+function highlightMatch(text, q) {
+  if (!q.trim()) return text;
+  const i = text.toLowerCase().indexOf(q.trim().toLowerCase());
+  if (i === -1) return text;
+  return (
+    <>
+      {text.slice(0, i)}
+      <strong>{text.slice(i, i + q.trim().length)}</strong>
+      {text.slice(i + q.trim().length)}
+    </>
+  );
+}
+
+function readInitialActiveId() {
+  if (typeof window === "undefined") return null;
+  if (window.location.hash.includes("figmacapture")) return "dashboard";
+  return null;
+}
+
+export default function App() {
+  const searchIndex = useMemo(() => buildSearchIndex(NAV_SECTIONS), []);
+  const [activeId, setActiveId] = useState(readInitialActiveId);
+  const [expanded, setExpanded] = useState(() => new Set());
+  const [query, setQuery] = useState("");
+  const [recentItems, setRecentItems] = useState(loadRecent);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => readSidebarCollapsed());
+  const [navPopover, setNavPopover] = useState(null);
+  const sidebarContainerRef = useRef(null);
+  const navPopoverRef = useRef(null);
+  const popoverHideTimer = useRef(null);
+
+  useEffect(() => {
+    localStorage.setItem(RECENT_STORAGE_KEY, JSON.stringify(recentItems));
+  }, [recentItems]);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(SIDEBAR_SESSION_KEY, sidebarCollapsed ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+  }, [sidebarCollapsed]);
+
+  const hideNavPopover = useCallback(() => {
+    if (popoverHideTimer.current) clearTimeout(popoverHideTimer.current);
+    setNavPopover(null);
+  }, []);
+
+  const scheduleHideNavPopover = useCallback(() => {
+    if (popoverHideTimer.current) clearTimeout(popoverHideTimer.current);
+    popoverHideTimer.current = setTimeout(() => setNavPopover(null), 120);
+  }, []);
+
+  const cancelHideNavPopover = useCallback(() => {
+    if (popoverHideTimer.current) clearTimeout(popoverHideTimer.current);
+  }, []);
+
+  const showNavPopoverFor = useCallback(
+    (triggerEl, section) => {
+      if (!sidebarCollapsed) return;
+      cancelHideNavPopover();
+      const container = sidebarContainerRef.current;
+      if (!container || !triggerEl) return;
+      const triggerRect = triggerEl.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      const left = containerRect.right + 8;
+      if (section.type === "item") {
+        const centerY = triggerRect.top + triggerRect.height / 2;
+        setNavPopover({ kind: "tooltip", label: section.label, left, centerY });
+      } else {
+        setNavPopover({
+          kind: "menu",
+          title: section.label,
+          left,
+          top: triggerRect.top,
+          items: section.children.map((c) => ({ id: c.id, label: c.label })),
+        });
+      }
+    },
+    [sidebarCollapsed, cancelHideNavPopover]
+  );
+
+  useLayoutEffect(() => {
+    if (!navPopover || navPopover.kind !== "menu" || !navPopoverRef.current) return;
+    const el = navPopoverRef.current;
+    const h = el.offsetHeight;
+    let top = navPopover.top;
+    if (top + h > window.innerHeight - 8) top = window.innerHeight - h - 8;
+    top = Math.max(8, top);
+    if (Math.abs(top - navPopover.top) > 1) {
+      setNavPopover((p) => (p && p.kind === "menu" ? { ...p, top } : p));
+    }
+  }, [navPopover]);
+
+  useEffect(() => {
+    const onDocClick = (e) => {
+      if (!navPopoverRef.current?.contains(e.target) && !e.target.closest(".category-item")) {
+        hideNavPopover();
+      }
+    };
+    document.addEventListener("click", onDocClick);
+    return () => document.removeEventListener("click", onDocClick);
+  }, [hideNavPopover]);
+
+  useEffect(() => () => {
+    if (popoverHideTimer.current) clearTimeout(popoverHideTimer.current);
+  }, []);
+
+  const searching = query.trim().length > 0;
+
+  const filteredSearch = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    return searchIndex.filter(
+      (e) => e.label.toLowerCase().includes(q) || (e.parentLabel && e.parentLabel.toLowerCase().includes(q))
+    );
+  }, [query, searchIndex]);
+
+  const addToRecent = useCallback((id, label) => {
+    if (SKIP_RECENT_IDS.has(id)) return;
+    setRecentItems((prev) => {
+      if (prev.some((i) => i.id === id)) return prev;
+      const next = [{ id, label }, ...prev];
+      if (next.length > RECENT_MAX) next.length = RECENT_MAX;
+      return next;
+    });
+  }, []);
+
+  const selectNav = useCallback(
+    (id, label) => {
+      addToRecent(id, label);
+      setActiveId(id);
+      setQuery("");
+      const pid = findParentGroupId(NAV_SECTIONS, id);
+      if (pid) setExpanded((prev) => new Set([...prev, pid]));
+    },
+    [addToRecent]
+  );
+
+  const toggleGroup = useCallback((groupId) => {
+    setExpanded((prev) => {
+      const n = new Set(prev);
+      if (n.has(groupId)) n.delete(groupId);
+      else n.add(groupId);
+      return n;
+    });
+  }, []);
+
+  const clearRecent = useCallback(() => setRecentItems([]), []);
+
+  const toggleSidebarCollapsed = useCallback(() => {
+    setSidebarCollapsed((v) => {
+      const next = !v;
+      if (next) setQuery("");
+      return next;
+    });
+    hideNavPopover();
+  }, [hideNavPopover]);
+
+  const meta = activeId ? getMetaForId(NAV_SECTIONS, activeId) : null;
 
   return (
-    <div style={{ display: "flex", height: "100vh", background: T.white, fontFamily: T.font, color: T.black }}>
-      {/* ══ SIDEBAR ══ */}
-      <div style={{ width: 280, display: "flex", flexDirection: "column", justifyContent: "space-between", padding: 16, flexShrink: 0, borderRight: "none" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          {/* Account */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: 4, borderRadius: T.radius.lg, cursor: "pointer" }}>
-              <div style={{ width: 32, height: 32, borderRadius: T.radius.md, background: T.black, color: T.white, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 500, flexShrink: 0 }}>D</div>
-              <span style={{ ...s.label, color: T.gray600, flex: 1 }}>Demo Solidgate</span>
-              <span style={{ color: T.gray400 }}>{icons.chevronUpDown}</span>
-            </div>
-
-            {/* Search */}
-            <div style={{ padding: 4 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: 4, border: `1px solid ${T.border}`, borderRadius: T.radius.md, boxShadow: T.shadow, background: T.white }}>
-                {icons.search}
-                <span style={{ ...s.label, color: T.gray400, fontWeight: 400 }}>Find category</span>
-              </div>
-            </div>
-
-            {/* Notifications */}
-            <div style={{ padding: "0 4px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: 4, borderRadius: T.radius.md, cursor: "pointer" }}>
-                <span style={{ width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center" }}>{icons.inbox}</span>
-                <span style={{ ...s.label, color: T.gray600 }}>Notifications</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Categories */}
-          <div style={{ padding: "0 4px" }}>
-            <div style={{ padding: 8 }}>
-              <p style={{ ...s.caption, color: T.gray500 }}>Categories</p>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              {NAV.map((item) => (
-                <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 8, padding: 4, borderRadius: T.radius.md, cursor: "pointer" }}>
-                  <span style={{ width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center" }}>{icons[item.icon]}</span>
-                  <span style={{ ...s.label, color: T.gray600, flex: 1 }}>{item.label}</span>
-                  {item.chevron && <span style={{ width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", color: T.gray400 }}>{icons.chevronDown}</span>}
+    <div style={{ display: "flex", flex: 1, minHeight: 0, alignItems: "stretch" }}>
+      <div
+        ref={sidebarContainerRef}
+        className={`sidebar-container${sidebarCollapsed ? " collapsed" : ""}`}
+        id="sidebar-container"
+      >
+        <div className="side-panel" id="side-panel">
+          <div className="top-wrapper">
+            <div className="account-wrapper">
+              <div className="account-inner">
+                <div className="account-avatar">D</div>
+                <div className="account-name-wrapper">
+                  <span className="account-name">Account name</span>
+                  <SideIcon icon={ChevronVerticalGlyph} />
                 </div>
-              ))}
+              </div>
             </div>
+
+            <div className="search-wrapper">
+              <div className="search-bar">
+                <SideIcon icon={SearchGlyph} />
+                <input
+                  className="search-input"
+                  type="search"
+                  placeholder="Search"
+                  autoComplete="off"
+                  spellCheck={false}
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="search-clear-btn"
+                  style={{ display: searching ? "flex" : "none" }}
+                  aria-label="Clear search"
+                  onClick={() => setQuery("")}
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="panel-wrapper">
+            <div className="panel-content" onScroll={hideNavPopover}>
+              <div
+                id="search-results"
+                style={{ display: searching && !sidebarCollapsed ? "block" : "none" }}
+              >
+                {filteredSearch.length === 0 && searching && (
+                  <div className="search-no-results">No results</div>
+                )}
+                {filteredSearch.map((e) => (
+                  <div
+                    key={e.id}
+                    className={`search-result-item${e.id === activeId ? " active" : ""}`}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => selectNav(e.id, e.label)}
+                    onKeyDown={(ev) => {
+                      if (ev.key === "Enter" || ev.key === " ") {
+                        ev.preventDefault();
+                        selectNav(e.id, e.label);
+                      }
+                    }}
+                  >
+                    <span className="search-result-name">{highlightMatch(e.label, query)}</span>
+                    {e.parentLabel && <span className="search-result-parent">{e.parentLabel}</span>}
+                  </div>
+                ))}
+              </div>
+
+              <div id="nav-content" style={{ display: searching ? "none" : "contents" }}>
+                <div
+                  id="recent-block"
+                  style={{
+                    display: recentItems.length && !sidebarCollapsed ? "block" : "none",
+                  }}
+                >
+                  <div className="section-label recent-label-row">
+                    <span className="section-label-text">Recent</span>
+                    <button type="button" className="clear-btn" id="clear-recent" onClick={clearRecent}>
+                      Clear
+                    </button>
+                  </div>
+                  <div id="recent-list">
+                    {recentItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className={`nav-item${item.id === activeId ? " active" : ""}`}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => selectNav(item.id, item.label)}
+                        onKeyDown={(ev) => {
+                          if (ev.key === "Enter" || ev.key === " ") {
+                            ev.preventDefault();
+                            selectNav(item.id, item.label);
+                          }
+                        }}
+                      >
+                        <span className="nav-item-text">{item.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="section-label">
+                    <span className="section-label-text">Categories</span>
+                  </div>
+                  <div>
+                    {NAV_SECTIONS.map((section) => {
+                      if (section.type === "item") {
+                        return (
+                          <div key={section.id} className="category-group">
+                            <div
+                              className={`category-item${section.id === activeId ? " active" : ""}`}
+                              role="button"
+                              tabIndex={0}
+                              data-nav-id={section.id}
+                              data-nav-label={section.label}
+                              onClick={() => selectNav(section.id, section.label)}
+                              onMouseEnter={(e) => showNavPopoverFor(e.currentTarget, section)}
+                              onMouseLeave={scheduleHideNavPopover}
+                              onFocus={(e) => sidebarCollapsed && showNavPopoverFor(e.currentTarget, section)}
+                              onBlur={scheduleHideNavPopover}
+                              onKeyDown={(ev) => {
+                                if (ev.key === "Enter" || ev.key === " ") {
+                                  ev.preventDefault();
+                                  selectNav(section.id, section.label);
+                                }
+                              }}
+                            >
+                              <div className="cat-icon-wrap">
+                                <SideIcon icon={ICON_GLYPH[section.icon]} />
+                              </div>
+                              <div className="cat-label-row">
+                                <span className="cat-label">{section.label}</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      const exp = expanded.has(section.id);
+                      const hasActiveChild = section.children.some((c) => c.id === activeId);
+                      const headerClass =
+                        "category-item" + (hasActiveChild && !exp ? " has-active-child" : "");
+                      return (
+                        <div key={section.id} className={`category-group${exp ? " expanded" : ""}`}>
+                          <div
+                            className={headerClass}
+                            data-expandable=""
+                            role="button"
+                            tabIndex={0}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!sidebarCollapsed) toggleGroup(section.id);
+                            }}
+                            onMouseEnter={(e) => showNavPopoverFor(e.currentTarget, section)}
+                            onMouseLeave={scheduleHideNavPopover}
+                            onFocus={(e) => sidebarCollapsed && showNavPopoverFor(e.currentTarget, section)}
+                            onBlur={scheduleHideNavPopover}
+                            onKeyDown={(ev) => {
+                              if (ev.key === "Enter" || ev.key === " ") {
+                                ev.preventDefault();
+                                if (!sidebarCollapsed) toggleGroup(section.id);
+                              }
+                            }}
+                          >
+                            <div className="cat-icon-wrap">
+                              <SideIcon icon={ICON_GLYPH[section.icon]} />
+                            </div>
+                            <div className="cat-label-row">
+                              <span className="cat-label">{section.label}</span>
+                              <SideIcon icon={ChevronDownGlyph} className="cat-chevron" />
+                            </div>
+                          </div>
+                          <div className="submenu">
+                            <div className="submenu-inner">
+                              {section.children.map((child) => (
+                                <div
+                                  key={child.id}
+                                  className={`subcategory-item${child.id === activeId ? " active" : ""}`}
+                                  data-nav-id={child.id}
+                                  data-nav-label={child.label}
+                                  role="button"
+                                  tabIndex={0}
+                                  onClick={() => selectNav(child.id, child.label)}
+                                  onKeyDown={(ev) => {
+                                    if (ev.key === "Enter" || ev.key === " ") {
+                                      ev.preventDefault();
+                                      selectNav(child.id, child.label);
+                                    }
+                                  }}
+                                >
+                                  <span className="subcategory-text">{child.label}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="fade-top" id="fade-top" />
+            <div className="fade-bottom" id="fade-bottom" />
+          </div>
+
+          <div className="user-wrapper">
+            <div className="user-avatar">
+              <img src={avtrImg} alt="" decoding="async" />
+            </div>
+            <div className="user-credentials">
+              <span className="user-name">Jane Doe</span>
+              <span className="user-email">jane.doe@solidgate.com</span>
+            </div>
+            <SideIcon icon={ChevronVerticalGlyph} />
           </div>
         </div>
 
-        {/* User */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: 4, borderRadius: T.radius.lg }}>
-          <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#c4c4c4", flexShrink: 0 }} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ ...s.caption, fontWeight: 500, color: T.gray600 }}>Jane Doe</p>
-            <p style={{ ...s.caption, color: "rgba(0,0,0,0.48)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>jane.doe@solidgate.com</p>
-          </div>
-          <span style={{ color: T.gray400 }}>{icons.chevronUpDown}</span>
-        </div>
+        <button
+          type="button"
+          className="collapse-btn"
+          id="collapse-btn"
+          aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-expanded={!sidebarCollapsed}
+          onClick={toggleSidebarCollapsed}
+        >
+          <SideIcon
+            icon={sidebarCollapsed ? SidebarExpandGlyph : SidebarCollapseGlyph}
+            size={24}
+            className="collapse-btn-icon"
+          />
+        </button>
       </div>
 
-      {/* ══ MAIN CONTENT ══ */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 12, padding: "16px 24px 72px", overflow: "auto", minWidth: 0 }}>
-        {/* Title row */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <div>
-            <h1 style={{ ...s.title, color: T.black }}>Orders</h1>
-            <div style={{ display: "flex", alignItems: "center", gap: 4, cursor: "pointer" }}>
-              <span style={{ ...s.label, color: T.accent, fontSize: 14 }}>Learn about Orders</span>
-              {icons.link}
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            {[
-              { icon: "filters", label: "Filters" },
-              { icon: "columns", label: "Columns" },
-              { icon: "export", label: "Export" },
-            ].map((btn) => (
-              <button key={btn.label} style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 8px", border: `1px solid ${T.borderMid}`, borderRadius: T.radius.sm, background: T.white, boxShadow: T.shadow, cursor: "pointer", fontFamily: T.font, fontSize: 14, fontWeight: 500, color: T.black }}>
-                <span style={{ display: "flex", padding: "4px 0" }}>{icons[btn.icon]}</span>
-                <span style={{ padding: "0 4px" }}>{btn.label}</span>
-              </button>
-            ))}
-          </div>
+      {navPopover && (
+        <div
+          ref={navPopoverRef}
+          id="nav-popover"
+          role="menu"
+          aria-label="Navigation submenu"
+          className={navPopover.kind === "tooltip" ? "is-tooltip" : ""}
+          style={{
+            position: "fixed",
+            display: "block",
+            zIndex: 500,
+            left: navPopover.left,
+            ...(navPopover.kind === "tooltip"
+              ? { top: navPopover.centerY, transform: "translateY(-50%)" }
+              : { top: navPopover.top }),
+          }}
+          onMouseEnter={cancelHideNavPopover}
+          onMouseLeave={scheduleHideNavPopover}
+        >
+          {navPopover.kind === "tooltip" && (
+            <span className="nav-popover-label">{navPopover.label}</span>
+          )}
+          {navPopover.kind === "menu" && (
+            <>
+              <div className="nav-popover-title">{navPopover.title}</div>
+              <div className="nav-popover-list">
+                {navPopover.items.map((item) => (
+                  <div
+                    key={item.id}
+                    className={`nav-popover-item${activeId === item.id ? " active" : ""}`}
+                    role="menuitem"
+                    tabIndex={0}
+                    onClick={() => {
+                      selectNav(item.id, item.label);
+                      hideNavPopover();
+                    }}
+                    onKeyDown={(ev) => {
+                      if (ev.key === "Enter" || ev.key === " ") {
+                        ev.preventDefault();
+                        selectNav(item.id, item.label);
+                        hideNavPopover();
+                      }
+                    }}
+                  >
+                    {item.label}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
+      )}
 
-        {/* Filters bar */}
-        <div style={{ display: "flex", gap: 12, padding: 12, background: T.gray100, borderRadius: T.radius.md, alignItems: "flex-end" }}>
-          <div style={{ flex: 1, display: "flex", gap: 12 }}>
-            {[
-              { label: "Order ID", type: "text" },
-              { label: "Customer email", type: "text" },
-              { label: "Channel", type: "select" },
-              { label: "Payment type", type: "select" },
-            ].map((f) => (
-              <div key={f.label} style={{ flex: 1, maxWidth: 320, display: "flex", flexDirection: "column", gap: 4 }}>
-                <p style={{ fontFamily: T.font, fontSize: 14, fontWeight: 500, lineHeight: "20px", margin: 0 }}>{f.label}</p>
-                <div style={{ height: 32, background: T.white, borderRadius: T.radius.sm, border: `1px solid ${T.gray300}`, boxShadow: T.shadow, display: "flex", alignItems: "center", padding: "0 8px" }}>
-                  <input style={{ flex: 1, border: "none", outline: "none", fontFamily: T.font, fontSize: 14, fontWeight: 500, background: "transparent" }} />
-                  {f.type === "select" && <span style={{ color: T.gray400, marginLeft: 4 }}>{icons.chevronDown}</span>}
+      <div className="main-content" id="main-content">
+        {!activeId ? (
+          <div className="main-empty" id="main-empty">
+            <span className="main-empty-text">Select an item from the navigation</span>
+          </div>
+        ) : (
+          <div className="main-view visible" id="main-view">
+            <header className="page-header page-header--main">
+              <div className="page-header-primary">
+                <h1 className="page-title">{meta?.label}</h1>
+                <a className="page-doc-link" href="#">
+                  <span className="page-doc-link__text">Learn about {meta?.label}</span>
+                  <SideIcon icon={ExternalLinkGlyph} className="page-doc-link__icon" />
+                </a>
+                {meta?.parentLabel && (
+                  <span className="page-breadcrumb">
+                    {meta.parentLabel} / {meta.label}
+                  </span>
+                )}
+              </div>
+              <button type="button" className="page-primary-btn" disabled>
+                + Button
+              </button>
+            </header>
+
+            <div className="filters-panel" role="region" aria-label="Filters">
+              <div className="filters-panel-inner">
+                <div className="filters-panel-fields" id="filters-panel-body">
+                  {FILTER_FIELDS.map((f) => (
+                    <div key={f.id} className="filters-field">
+                      <p className="filters-field-label">{f.label}</p>
+                      <div className="unit-textfield unit-textfield--sm">
+                        <div className="unit-textfield__outline">
+                          <div
+                            className={
+                              f.kind === "amount"
+                                ? "unit-textfield__field unit-textfield__field--split"
+                                : "unit-textfield__field"
+                            }
+                          >
+                            {renderFilterInput(f)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="filters-panel-actions">
+                  <button type="button" className="filters-apply" disabled>
+                    Apply
+                  </button>
+                  <button type="button" className="filters-clear" disabled>
+                    Clear All
+                  </button>
                 </div>
               </div>
-            ))}
-          </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
-            <button style={{ padding: "4px 12px", background: T.black, color: T.white, border: "none", borderRadius: T.radius.sm, fontFamily: T.font, fontSize: 14, fontWeight: 500, lineHeight: "24px", cursor: "pointer", opacity: 0.32 }}>Apply</button>
-            <button style={{ padding: "4px 12px", background: "transparent", color: T.black, border: "none", borderRadius: T.radius.sm, fontFamily: T.font, fontSize: 14, fontWeight: 500, lineHeight: "24px", cursor: "pointer", opacity: 0.32 }}>Clear All</button>
-          </div>
-        </div>
+            </div>
 
-        {/* Table */}
-        <div style={{ border: `1px solid ${T.gray200}`, borderRadius: 6, overflow: "hidden", flex: 1 }}>
-          {/* Header */}
-          <div style={{ display: "flex", borderBottom: `1px solid ${T.gray200}` }}>
-            {COLUMNS.map((col) => (
-              <div key={col.label} style={{ width: col.width, flexShrink: 0, padding: "8px 12px", borderBottom: `1px solid ${T.gray200}`, background: T.white, display: "flex", alignItems: "center" }}>
-                <Skel w={col.width * 0.6} />
-              </div>
-            ))}
-          </div>
-          {/* Rows */}
-          {ROWS.map((row, i) => (
-            <div key={i} style={{ display: "flex", borderBottom: i < ROWS.length - 1 ? `1px solid ${T.white}` : "none" }}>
-              {[
-                { w: 160, sw: 129 },
-                { w: 88, sw: 20 },
-                { w: 112, sw: 70 },
-                { w: 160, sw: 134 },
-                { w: 120, badge: true },
-                { w: 120, badge: true },
-                { w: 192, sw: 135 },
-                { w: 160, sw: 61 },
-                { w: 160, sw: 106 },
-              ].map((cell, j) => (
-                <div key={j} style={{ width: cell.w, flexShrink: 0, padding: "8px 12px", display: "flex", alignItems: "center", height: 40 }}>
-                  {cell.badge ? (
-                    <div style={{ background: T.gray300, borderRadius: T.radius.sm, padding: "0 8px", display: "flex", alignItems: "center", height: 24 }}>
-                      <Skel w={45} />
-                    </div>
-                  ) : (
-                    <Skel w={cell.sw} />
-                  )}
+            <div className="sk-cards-row">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="sk-card">
+                  <div className="sk sk-card-label" />
+                  <div className="sk sk-card-value" />
+                  <div className="sk sk-card-sub" />
                 </div>
               ))}
             </div>
-          ))}
-        </div>
+
+            <div className="sk-chart-wrap">
+              <div className="sk-chart-header">
+                <div className="sk sk-chart-title" />
+                <div className="sk sk-chart-legend" />
+              </div>
+              <div className="sk-chart-bars">
+                {CHART_BAR_HEIGHTS.map((h, i) => (
+                  <div key={i} className="sk sk-bar" style={{ height: `${h}%` }} />
+                ))}
+              </div>
+            </div>
+
+            <div className="sk-table-wrap">
+              <div className="sk-table-header">
+                <div className="sk sk-table-title" />
+                <div className="sk sk-table-action sk" />
+              </div>
+              {SK_TABLE_ROWS.map((widths, ri) => (
+                <div
+                  key={ri}
+                  className="sk-table-row"
+                  style={{ gridTemplateColumns: "2fr 1.5fr 1fr 1fr 80px" }}
+                >
+                  {widths.map((pct, ci) => (
+                    <div key={ci} className="sk sk-cell" style={{ width: `${pct}%` }} />
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,0 +1,255 @@
+/* ─────────────────────────────────────────────
+   Design tokens — Figma: Filters (fyTKqJ4nUo7kBuC938jd2F)
+   Color scales: variables / prior sync
+   Space, radius, shadow, type, opacity: frame "Tokens" node 245:6433
+   ───────────────────────────────────────────── */
+
+:root {
+  /* Spacing (unit) */
+  --space-100: 4px;
+  --space-200: 8px;
+  --space-300: 12px;
+  --space-400: 16px;
+  --space-500: 24px;
+  --space-600: 32px;
+  --space-700: 48px;
+  --space-800: 72px;
+  --space-900: 104px;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  /* Unit UI kit (textfield, filters field) — alias */
+  --unit-radius-sm: var(--radius-sm);
+  --radius-xl: 12px;
+  --radius-round: 800px;
+  --radius-circle: 50%;
+
+  /* Shadow (Figma Shadow/shadow-*) */
+  --shadow-sm: 0 2px 4px -2px var(--color-dense-900-opacity-400);
+  --shadow-md: 0 8px 16px -6px #00000014, 0 6px 8px -6px var(--color-dense-900-opacity-400);
+  --shadow-lg: 0 14px 64px -4px var(--color-dense-900-opacity-400),
+    0 8px 22px -6px var(--color-dense-900-opacity-400);
+
+  /* Focus outline (Figma Outline/outline-*) — ring via box-shadow */
+  --outline-sm: 0 0 0 2px rgb(27 143 234 / 32%);
+  --outline-lg: 0 0 0 4px rgb(27 143 234 / 32%);
+
+  /* Opacity scale (Figma Opacity / opacity-100 … 900) */
+  --opacity-100: 0.02;
+  --opacity-200: 0.04;
+  --opacity-300: 0.08;
+  --opacity-400: 0.12;
+  --opacity-500: 0.16;
+  --opacity-600: 0.24;
+  --opacity-700: 0.32;
+  --opacity-800: 0.48;
+  --opacity-900: 0.64;
+
+  /* Dense (grayscale) */
+  --color-dense-100: #a3a3a3;
+  --color-dense-200: #8f8f8f;
+  --color-dense-300: #7a7a7a;
+  --color-dense-400: #666666;
+  --color-dense-500: #525252;
+  --color-dense-600: #3d3d3d;
+  --color-dense-700: #292929;
+  --color-dense-800: #141414;
+  --color-dense-900: #000000;
+
+  /* Black with alpha (dense-900 overlays) */
+  --color-dense-900-opacity-100: #00000005;
+  --color-dense-900-opacity-200: #0000000a;
+  --color-dense-900-opacity-300: #00000014;
+  --color-dense-900-opacity-400: #0000001f;
+  --color-dense-900-opacity-500: #00000029;
+  --color-dense-900-opacity-600: #0000003d;
+  --color-dense-900-opacity-700: #00000052;
+  --color-dense-900-opacity-800: #0000007a;
+  --color-dense-900-opacity-900: #000000a3;
+
+  /* Transparent black (semantic steps; base #000000) */
+  --color-dense-transparent-100: #000000;
+  --color-dense-transparent-200: #000000;
+  --color-dense-transparent-300: #000000;
+  --color-dense-transparent-400: #000000;
+  --color-dense-transparent-500: #000000;
+  --color-dense-transparent-600: #000000;
+  --color-dense-transparent-700: #000000;
+  --color-dense-transparent-800: #000000;
+  --color-dense-transparent-900: #000000;
+
+  /* Soft (neutrals) */
+  --color-soft-100: #ffffff;
+  --color-soft-200: #fafafa;
+  --color-soft-300: #f5f5f5;
+  --color-soft-400: #f0f0f0;
+  --color-soft-500: #ebebeb;
+  --color-soft-600: #e0e0e0;
+  --color-soft-700: #d6d6d6;
+  --color-soft-800: #cccccc;
+  --color-soft-900: #c2c2c2;
+
+  /* Congress blue (primary / links) */
+  --color-congress-blue-100: #f6fafe;
+  --color-congress-blue-200: #e2effc;
+  --color-congress-blue-300: #b7d8f8;
+  --color-congress-blue-400: #8bc1f3;
+  --color-congress-blue-500: #5daaef;
+  --color-congress-blue-600: #1b8fea;
+  --color-congress-blue-700: #0072e0;
+  --color-congress-blue-800: #005fbb;
+  --color-congress-blue-900: #004c94;
+
+  /* Eden (green / success) */
+  --color-eden-100: #f7fbf9;
+  --color-eden-200: #e4f0ec;
+  --color-eden-300: #bddbd1;
+  --color-eden-400: #96c6b7;
+  --color-eden-500: #6db19e;
+  --color-eden-600: #3b9a83;
+  --color-eden-700: #00816a;
+  --color-eden-800: #076b59;
+  --color-eden-900: #105547;
+
+  /* Pickled bean (amber) */
+  --color-pickled-bean-100: #fff9ee;
+  --color-pickled-bean-200: #ffeac5;
+  --color-pickled-bean-300: #ffc768;
+  --color-pickled-bean-400: #ffa524;
+  --color-pickled-bean-500: #eb8e28;
+  --color-pickled-bean-600: #ca7629;
+  --color-pickled-bean-700: #a86027;
+  --color-pickled-bean-800: #8d4f25;
+  --color-pickled-bean-900: #703e21;
+
+  /* Burgundy (error / danger) */
+  --color-burgundy-100: #fff9f7;
+  --color-burgundy-200: #ffe9e3;
+  --color-burgundy-300: #ffc7bb;
+  --color-burgundy-400: #ffa394;
+  --color-burgundy-500: #ff7a6e;
+  --color-burgundy-600: #fe444a;
+  --color-burgundy-700: #ed002d;
+  --color-burgundy-800: #c5002a;
+  --color-burgundy-900: #9a0025;
+
+  /* Accent palettes (pairs 200 / 900) */
+  --color-blue-dianne-200: #cceaec;
+  --color-blue-dianne-900: #204c50;
+  --color-chatham-blue-200: #cadced;
+  --color-chatham-blue-900: #14416c;
+  --color-jacksons-purple-200: #cdccf2;
+  --color-jacksons-purple-900: #292695;
+  --color-clover-200: #e7eaa1;
+  --color-clover-900: #474911;
+  --color-honey-flower-200: #dbc0f0;
+  --color-honey-flower-900: #4d1d74;
+
+  /* Search badge */
+  --color-badge-search-bg: #ffe922;
+
+  /* Screamin green */
+  --color-screamin-green-100: #f5fef9;
+  --color-screamin-green-200: #edfef3;
+  --color-screamin-green-300: #dbfee7;
+  --color-screamin-green-400: #b8fdcf;
+  --color-screamin-green-500: #94fbb7;
+  --color-screamin-green-600: #71fa9f;
+  --color-screamin-green-700: #4df987;
+  --color-screamin-green-800: #07d970;
+  --color-screamin-green-900: #06a872;
+
+  /* Violet */
+  --color-violet-100: #fbf5ff;
+  --color-violet-200: #f9f1ff;
+  --color-violet-300: #f3e3ff;
+  --color-violet-400: #e6c7ff;
+  --color-violet-500: #daabff;
+  --color-violet-600: #cd8fff;
+  --color-violet-700: #c173ff;
+  --color-violet-800: #aa42ff;
+  --color-violet-900: #930fff;
+
+  /* Aqua */
+  --color-aqua-100: #f0feff;
+  --color-aqua-200: #e5fdff;
+  --color-aqua-300: #ccfcff;
+  --color-aqua-400: #99f9ff;
+  --color-aqua-500: #66f6ff;
+  --color-aqua-600: #33f3ff;
+  --color-aqua-700: #00f0ff;
+  --color-aqua-800: #00becc;
+  --color-aqua-900: #009099;
+
+  /* Legacy aliases used by side-panel (map to Figma overlays) */
+  --color-grey-200: var(--color-dense-900-opacity-200);
+  --color-grey-400: var(--color-dense-900-opacity-400);
+  --color-brand-green: var(--color-eden-600);
+
+  /* Semantic shortcuts */
+  --color-icon-sidebar-muted: var(--color-dense-200);
+  --color-accent: var(--color-congress-blue-700);
+
+  /* Font size (fs) — Tokens 245:6433 */
+  --fs-100: 12px;
+  --fs-200: 14px;
+  --fs-300: 16px;
+  --fs-400: 18px;
+  --fs-500: 21px;
+  --fs-600: 32px;
+  --fs-700: 40px;
+  --fs-800: 56px;
+  --fs-900: 72px;
+
+  /* Line height (lh) */
+  --lh-100: 16px;
+  --lh-200: 20px;
+  --lh-300: 24px;
+  --lh-400: 32px;
+  --lh-500: 40px;
+  --lh-600: 48px;
+  --lh-700: 56px;
+  --lh-800: 64px;
+  --lh-900: 72px;
+
+  /* Font weight (fw) */
+  --fw-normal: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+
+  /* Letter spacing (ls) */
+  --ls-negative-xl: -0.04em;
+  --ls-negative-lg: -0.03em;
+  --ls-negative-md: -0.02em;
+  --ls-negative-sm: -0.01em;
+  --ls-neutral: 0em;
+  --ls-positive-sm: 0.01em;
+  --ls-positive-md: 0.02em;
+  --ls-positive-lg: 0.03em;
+  --ls-positive-xl: 0.04em;
+
+  /* Textfield (Unit UI Kit — Textfield / InputBase) */
+  --tf-height-md: 40px;
+  --tf-height-sm: 32px;
+  --tf-border-default: var(--color-soft-600);
+  --tf-border-hover: var(--color-soft-700);
+  --tf-border-focus: var(--color-congress-blue-700);
+  --tf-border-error: var(--color-burgundy-700);
+  --tf-ring-focus: var(--color-congress-blue-300);
+  --tf-padding-x-md: var(--space-300);
+  --tf-padding-y-md: var(--space-200);
+  --tf-padding-x-sm: var(--space-200);
+  --tf-padding-y-sm: var(--space-100);
+  --tf-inner-gap: var(--space-200);
+
+  /* Typography composites (Inter) */
+  --font-family: "Inter", sans-serif;
+  --font-label-medium: var(--fw-medium) var(--fs-200) / var(--lh-300) var(--font-family);
+  --font-body-normal: var(--fw-normal) var(--fs-200) / var(--lh-200) var(--font-family);
+  --font-body-medium: var(--fw-medium) var(--fs-200) / var(--lh-200) var(--font-family);
+  --font-caption-normal: var(--fw-normal) var(--fs-100) / var(--lh-100) var(--font-family);
+  --font-feature: "cv06" 1, "cv05" 1, "case" 1;
+}
