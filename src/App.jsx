@@ -69,7 +69,20 @@ const FILTER_FIELDS = [
 
 const RECENT_STORAGE_KEY = "merchant-hub-recent-v1";
 const SIDEBAR_SESSION_KEY = "merchant-hub-sidebar-collapsed";
+const LAYOUT_VERSION_KEY = "merchant-hub-layout-version";
 const RECENT_MAX = 7;
+
+/** Default v2; v1 залишається для порівняння. */
+function readLayoutVersion() {
+  if (typeof localStorage === "undefined") return 2;
+  try {
+    const v = localStorage.getItem(LAYOUT_VERSION_KEY);
+    if (v === null) return 2;
+    return v === "2" ? 2 : 1;
+  } catch {
+    return 2;
+  }
+}
 
 function readSidebarCollapsed() {
   if (typeof sessionStorage === "undefined") return false;
@@ -137,6 +150,111 @@ function renderFilterInput(field) {
   }
 }
 
+function mapFilterFieldRows() {
+  return FILTER_FIELDS.map((f) => (
+    <div key={f.id} className="filters-field">
+      <p className="filters-field-label">{f.label}</p>
+      <div className="unit-textfield unit-textfield--sm">
+        <div className="unit-textfield__outline">
+          <div
+            className={
+              f.kind === "amount" ? "unit-textfield__field unit-textfield__field--split" : "unit-textfield__field"
+            }
+          >
+            {renderFilterInput(f)}
+          </div>
+        </div>
+      </div>
+    </div>
+  ));
+}
+
+function FiltersActionsRow({ variant }) {
+  const extra = variant === "v2" ? " filters-panel-actions--v2" : "";
+  return (
+    <div className={`filters-panel-actions${extra}`}>
+      <button type="button" className="filters-apply" disabled>
+        Apply
+      </button>
+      <button type="button" className="filters-clear" disabled>
+        Clear All
+      </button>
+    </div>
+  );
+}
+
+function MainViewChrome({ version, meta }) {
+  const fields = mapFilterFieldRows();
+
+  if (version === 2) {
+    return (
+      <>
+        <header className="page-header page-header--main page-header--v2">
+          <div className="page-header-v2-row">
+            <div className="page-header-v2-titles">
+              <h1 className="page-title">{meta?.label}</h1>
+              {meta?.parentLabel && (
+                <span className="page-breadcrumb">
+                  {meta.parentLabel} / {meta.label}
+                </span>
+              )}
+            </div>
+            <div className="page-header-v2-cta">
+              <a className="page-doc-link" href="#">
+                <span className="page-doc-link__text">Learn about {meta?.label}</span>
+                <SideIcon icon={ExternalLinkGlyph} className="page-doc-link__icon" />
+              </a>
+              <button type="button" className="page-primary-btn" disabled>
+                + Button
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <div className="filters-panel filters-panel--v2" role="region" aria-label="Filters">
+          <div className="filters-panel-inner filters-panel-inner--v2">
+            <FiltersActionsRow variant="v2" />
+            <div className="filters-panel-fields filters-panel-fields--v2" id="filters-panel-body">
+              {fields}
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <header className="page-header page-header--main">
+        <div className="page-header-primary">
+          <h1 className="page-title">{meta?.label}</h1>
+          <a className="page-doc-link" href="#">
+            <span className="page-doc-link__text">Learn about {meta?.label}</span>
+            <SideIcon icon={ExternalLinkGlyph} className="page-doc-link__icon" />
+          </a>
+          {meta?.parentLabel && (
+            <span className="page-breadcrumb">
+              {meta.parentLabel} / {meta.label}
+            </span>
+          )}
+        </div>
+        <button type="button" className="page-primary-btn" disabled>
+          + Button
+        </button>
+      </header>
+
+      <div className="filters-panel" role="region" aria-label="Filters">
+        <div className="filters-panel-inner">
+          <div className="filters-panel-fields" id="filters-panel-body">
+            {fields}
+          </div>
+          <FiltersActionsRow variant="v1" />
+        </div>
+      </div>
+    </>
+  );
+}
+
 const CHART_BAR_HEIGHTS = [45, 70, 55, 90, 65, 80, 50, 75, 60, 85, 40, 70];
 
 const SK_TABLE_ROWS = [
@@ -186,6 +304,7 @@ export default function App() {
   const [recentItems, setRecentItems] = useState(loadRecent);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => readSidebarCollapsed());
   const [navPopover, setNavPopover] = useState(null);
+  const [layoutVersion, setLayoutVersion] = useState(readLayoutVersion);
   const sidebarContainerRef = useRef(null);
   const navPopoverRef = useRef(null);
   const popoverHideTimer = useRef(null);
@@ -201,6 +320,14 @@ export default function App() {
       /* ignore */
     }
   }, [sidebarCollapsed]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(LAYOUT_VERSION_KEY, String(layoutVersion));
+    } catch {
+      /* ignore */
+    }
+  }, [layoutVersion]);
 
   const hideNavPopover = useCallback(() => {
     if (popoverHideTimer.current) clearTimeout(popoverHideTimer.current);
@@ -623,56 +750,7 @@ export default function App() {
           </div>
         ) : (
           <div className="main-view visible" id="main-view">
-            <header className="page-header page-header--main">
-              <div className="page-header-primary">
-                <h1 className="page-title">{meta?.label}</h1>
-                <a className="page-doc-link" href="#">
-                  <span className="page-doc-link__text">Learn about {meta?.label}</span>
-                  <SideIcon icon={ExternalLinkGlyph} className="page-doc-link__icon" />
-                </a>
-                {meta?.parentLabel && (
-                  <span className="page-breadcrumb">
-                    {meta.parentLabel} / {meta.label}
-                  </span>
-                )}
-              </div>
-              <button type="button" className="page-primary-btn" disabled>
-                + Button
-              </button>
-            </header>
-
-            <div className="filters-panel" role="region" aria-label="Filters">
-              <div className="filters-panel-inner">
-                <div className="filters-panel-fields" id="filters-panel-body">
-                  {FILTER_FIELDS.map((f) => (
-                    <div key={f.id} className="filters-field">
-                      <p className="filters-field-label">{f.label}</p>
-                      <div className="unit-textfield unit-textfield--sm">
-                        <div className="unit-textfield__outline">
-                          <div
-                            className={
-                              f.kind === "amount"
-                                ? "unit-textfield__field unit-textfield__field--split"
-                                : "unit-textfield__field"
-                            }
-                          >
-                            {renderFilterInput(f)}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="filters-panel-actions">
-                  <button type="button" className="filters-apply" disabled>
-                    Apply
-                  </button>
-                  <button type="button" className="filters-clear" disabled>
-                    Clear All
-                  </button>
-                </div>
-              </div>
-            </div>
+            <MainViewChrome version={layoutVersion} meta={meta} />
 
             <div className="sk-cards-row">
               {[0, 1, 2, 3].map((i) => (
@@ -715,6 +793,32 @@ export default function App() {
             </div>
           </div>
         )}
+      </div>
+
+      <div
+        className="unit-button-group unit-button-group--floating"
+        role="radiogroup"
+        aria-label="Page layout version"
+      >
+        <button
+          type="button"
+          role="radio"
+          aria-checked={layoutVersion === 1}
+          className={`unit-button-group__segment${layoutVersion === 1 ? " unit-button-group__segment--active" : ""}`}
+          onClick={() => setLayoutVersion(1)}
+        >
+          v1
+        </button>
+        <button
+          type="button"
+          role="radio"
+          aria-checked={layoutVersion === 2}
+          className={`unit-button-group__segment${layoutVersion === 2 ? " unit-button-group__segment--active" : ""}`}
+          onClick={() => setLayoutVersion(2)}
+        >
+          v2
+        </button>
+        <span className="unit-button-group__bg" aria-hidden />
       </div>
     </div>
   );
