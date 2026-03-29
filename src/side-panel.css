@@ -976,6 +976,12 @@ body,
   min-width: 0;
 }
 
+.filters-panel--v2 {
+  background: transparent;
+  color: rgba(0, 0, 0, 0);
+  border-radius: 0;
+}
+
 .filters-panel-inner {
   display: flex;
   flex-direction: row;
@@ -1009,14 +1015,102 @@ body,
   margin: 0;
 }
 
+/* Перший блок селектів (Status ×2, Refund, Channel): як shadcn Field — gap label/control 8px */
+.filters-panel-fields--v2 .filters-field--primary-select {
+  gap: var(--space-200);
+}
+
+/* Відступ після 2×2 блоку перед рештою фільтрів */
+.filters-panel-fields--v2 .filters-field--after-primary-block {
+  margin-top: var(--space-300);
+}
+
 /* Textfield visuals: see textfield.css (.unit-textfield__*); unit radius on filter row */
 .filters-field .unit-textfield__outline {
   width: 100%;
-  border-radius: var(--unit-radius-sm);
+  border-radius: var(--radius-md);
 }
 
 .filters-field .unit-textfield__field {
-  border-radius: var(--unit-radius-sm);
+  border-radius: var(--radius-md);
+}
+
+/* Shadcn Select у оболонці unit-textfield — висота/падінги як .unit-textfield--sm (32px, 4px×8px) */
+.filters-shadcn-select .filters-shadcn-select__field {
+  display: flex;
+  min-height: var(--tf-height-sm);
+  padding: 0;
+  align-items: stretch;
+}
+
+/* Перебиваємо Tailwind h-7/sm на trigger, щоб збігалося з іншими полями фільтрів */
+.filters-shadcn-select .filters-select-trigger[data-slot="select-trigger"] {
+  width: 100%;
+  min-width: 0;
+  flex: 1;
+  height: var(--tf-height-sm) !important;
+  min-height: var(--tf-height-sm) !important;
+  max-height: var(--tf-height-sm);
+  box-sizing: border-box;
+  border: none !important;
+  border-radius: var(--radius-md) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font: var(--font-body-medium);
+  font-size: var(--fs-200);
+  line-height: var(--lh-300);
+  color: var(--color-dense-900);
+  padding: var(--tf-padding-y-sm) var(--tf-padding-x-sm) !important;
+  gap: var(--tf-inner-gap);
+  column-gap: var(--space-200);
+}
+
+.filters-shadcn-select .filters-select-trigger[data-slot="select-trigger"]:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  --tw-ring-width: 0 !important;
+  --tw-ring-offset-width: 0 !important;
+}
+
+.filters-shadcn-select .filters-select-trigger[data-slot="select-trigger"][data-placeholder] {
+  color: var(--color-dense-200);
+  font-weight: var(--fw-normal);
+}
+
+.filters-shadcn-select .filters-select-trigger[data-slot="select-trigger"] svg {
+  color: var(--color-dense-600);
+  flex-shrink: 0;
+}
+
+/* Dropdown: ширина тригера, z-index над сайдбаром, радіус як у полях фільтрів */
+.filters-select-content[data-slot="select-content"] {
+  z-index: 600;
+  min-width: var(--radix-select-trigger-width);
+  border-radius: var(--unit-radius-sm) !important;
+  border: 1px solid var(--border);
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-100);
+}
+
+.filters-select-group[data-slot="select-group"] {
+  padding: 0;
+}
+
+.filters-select-item[data-slot="select-item"] {
+  min-height: var(--tf-height-sm);
+  padding: var(--space-100) var(--space-200);
+  padding-right: 2rem;
+  border-radius: var(--unit-radius-sm) !important;
+  font-size: var(--fs-200);
+  line-height: var(--lh-300);
+  font-weight: var(--fw-medium);
+}
+
+.filters-select-item[data-slot="select-item"][data-highlighted] {
+  background: var(--accent);
+  color: var(--accent-foreground);
 }
 
 .filters-panel-actions {
@@ -1032,6 +1126,7 @@ body,
 .filters-panel-inner--v2 {
   flex-direction: column;
   align-items: stretch;
+  padding: 0;
 }
 
 .filters-panel-actions--v2 {

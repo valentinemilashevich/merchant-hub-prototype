@@ -20,6 +20,16 @@ import SidebarExpandGlyph from "./assets/icons/sidebar-expand.svg?react";
 import TaxesGlyph from "./assets/icons/taxes.svg?react";
 
 import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+
+import {
   NAV_SECTIONS,
   SKIP_RECENT_IDS,
   buildSearchIndex,
@@ -51,21 +61,73 @@ function CalendarGlyph({ className }) {
 }
 
 const FILTER_FIELDS = [
+  {
+    id: "status",
+    label: "Status",
+    kind: "select",
+    options: [
+      { value: "pending", label: "Pending" },
+      { value: "approved", label: "Approved" },
+      { value: "declined", label: "Declined" },
+      { value: "refunded", label: "Refunded" },
+    ],
+  },
+  {
+    id: "status-alt",
+    label: "Status",
+    ariaLabel: "Status, secondary",
+    kind: "select",
+    options: [
+      { value: "processing", label: "Processing" },
+      { value: "completed", label: "Completed" },
+      { value: "failed", label: "Failed" },
+    ],
+  },
+  {
+    id: "refund",
+    label: "Refund",
+    kind: "select",
+    options: [
+      { value: "none", label: "None" },
+      { value: "partial", label: "Partial" },
+      { value: "full", label: "Full" },
+    ],
+  },
+  {
+    id: "channel",
+    label: "Channel",
+    kind: "select",
+    options: [
+      { value: "card", label: "Card" },
+      { value: "apple-pay", label: "Apple Pay" },
+      { value: "google-pay", label: "Google Pay" },
+      { value: "bank-transfer", label: "Bank transfer" },
+    ],
+  },
   { id: "order-id", label: "Order ID", kind: "text" },
   { id: "email", label: "Email", kind: "text" },
   { id: "created-from", label: "Created at from", kind: "date" },
   { id: "created-to", label: "Created at to", kind: "date" },
   { id: "updated-from", label: "Updated at from", kind: "date" },
   { id: "updated-to", label: "Updated at to", kind: "date" },
-  { id: "channel", label: "Channel", kind: "select" },
   { id: "amount", label: "Amount", kind: "amount" },
-  { id: "currency", label: "Currency", kind: "select" },
+  {
+    id: "currency",
+    label: "Currency",
+    kind: "select",
+    options: [
+      { value: "usd", label: "USD" },
+      { value: "eur", label: "EUR" },
+      { value: "gbp", label: "GBP" },
+    ],
+  },
   { id: "customer-id", label: "Customer ID", kind: "text" },
-  { id: "status", label: "Status", kind: "select" },
-  { id: "refund", label: "Refund", kind: "select" },
   { id: "cardholder", label: "Cardholder name", kind: "text" },
   { id: "descriptor", label: "Descriptor", kind: "text" },
 ];
+
+/** Перший блок фільтрів (2×2): Status ×2, Refund, Channel — відступи як у shadcn Field. */
+const PRIMARY_FILTER_IDS = new Set(["status", "status-alt", "refund", "channel"]);
 
 const RECENT_STORAGE_KEY = "merchant-hub-recent-v1";
 const SIDEBAR_SESSION_KEY = "merchant-hub-sidebar-collapsed";
@@ -117,7 +179,7 @@ function SideIcon({ icon, className = "", size = 16 }) {
   });
 }
 
-function renderFilterInput(field) {
+function renderFilterInputV1(field) {
   switch (field.kind) {
     case "date":
       return (
@@ -150,7 +212,7 @@ function renderFilterInput(field) {
   }
 }
 
-function mapFilterFieldRows() {
+function mapV1FilterFieldRows() {
   return FILTER_FIELDS.map((f) => (
     <div key={f.id} className="filters-field">
       <p className="filters-field-label">{f.label}</p>
@@ -161,7 +223,7 @@ function mapFilterFieldRows() {
               f.kind === "amount" ? "unit-textfield__field unit-textfield__field--split" : "unit-textfield__field"
             }
           >
-            {renderFilterInput(f)}
+            {renderFilterInputV1(f)}
           </div>
         </div>
       </div>
@@ -183,76 +245,141 @@ function FiltersActionsRow({ variant }) {
   );
 }
 
-function MainViewChrome({ version, meta }) {
-  const fields = mapFilterFieldRows();
+/** v2: Shadcn Select для полів kind === "select". */
+function MainViewV2Chrome({ meta }) {
+  const [selectValues, setSelectValues] = useState({});
+  const setSelect = useCallback((id, value) => {
+    setSelectValues((prev) => ({ ...prev, [id]: value }));
+  }, []);
 
-  if (version === 2) {
-    return (
-      <>
-        <header className="page-header page-header--main page-header--v2">
-          <div className="page-header-v2-row">
-            <div className="page-header-v2-titles">
-              <h1 className="page-title">{meta?.label}</h1>
-              {meta?.parentLabel && (
-                <span className="page-breadcrumb">
-                  {meta.parentLabel} / {meta.label}
-                </span>
-              )}
-            </div>
-            <div className="page-header-v2-cta">
-              <a className="page-doc-link" href="#">
-                <span className="page-doc-link__text">Learn about {meta?.label}</span>
-                <SideIcon icon={ExternalLinkGlyph} className="page-doc-link__icon" />
-              </a>
-              <button type="button" className="page-primary-btn" disabled>
-                + Button
-              </button>
+  const fields = FILTER_FIELDS.map((f) => (
+    <div
+      key={f.id}
+      className={cn(
+        "filters-field",
+        PRIMARY_FILTER_IDS.has(f.id) && "filters-field--primary-select",
+        f.id === "order-id" && "filters-field--after-primary-block"
+      )}
+    >
+      <p className="filters-field-label">{f.label}</p>
+      {f.kind === "select" ? (
+        <div className="unit-textfield unit-textfield--sm filters-shadcn-select">
+          <div className="unit-textfield__outline">
+            <div className="unit-textfield__field filters-shadcn-select__field">
+              <Select value={selectValues[f.id]} onValueChange={(v) => setSelect(f.id, v)}>
+                <SelectTrigger
+                  size="sm"
+                  className="filters-select-trigger"
+                  aria-label={f.ariaLabel ?? f.label}
+                >
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
+                <SelectContent
+                  position="popper"
+                  align="start"
+                  sideOffset={4}
+                  className="filters-select-content"
+                >
+                  <SelectGroup className="filters-select-group">
+                    {f.options.map((o) => (
+                      <SelectItem key={o.value} value={o.value} className="filters-select-item">
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </div>
           </div>
+        </div>
+      ) : (
+        <div className="unit-textfield unit-textfield--sm">
+          <div className="unit-textfield__outline">
+            <div
+              className={
+                f.kind === "amount" ? "unit-textfield__field unit-textfield__field--split" : "unit-textfield__field"
+              }
+            >
+              {renderFilterInputV1(f)}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  ));
+
+  return (
+    <>
+      <header className="page-header page-header--main page-header--v2">
+        <div className="page-header-v2-row">
+          <div className="page-header-v2-titles">
+            <h1 className="page-title">{meta?.label}</h1>
+            {meta?.parentLabel && (
+              <span className="page-breadcrumb">
+                {meta.parentLabel} / {meta.label}
+              </span>
+            )}
+          </div>
+          <div className="page-header-v2-cta">
+            <a className="page-doc-link" href="#">
+              <span className="page-doc-link__text">Learn about {meta?.label}</span>
+              <SideIcon icon={ExternalLinkGlyph} className="page-doc-link__icon" />
+            </a>
+            <button type="button" className="page-primary-btn" disabled>
+              + Button
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <div className="filters-panel filters-panel--v2" role="region" aria-label="Filters">
+        <div className="filters-panel-inner filters-panel-inner--v2">
+          <FiltersActionsRow variant="v2" />
+          <div className="filters-panel-fields filters-panel-fields--v2" id="filters-panel-body">
+            {fields}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function MainViewChrome({ version, meta }) {
+  if (version === 1) {
+    const fields = mapV1FilterFieldRows();
+    return (
+      <>
+        <header className="page-header page-header--main">
+          <div className="page-header-primary">
+            <h1 className="page-title">{meta?.label}</h1>
+            <a className="page-doc-link" href="#">
+              <span className="page-doc-link__text">Learn about {meta?.label}</span>
+              <SideIcon icon={ExternalLinkGlyph} className="page-doc-link__icon" />
+            </a>
+            {meta?.parentLabel && (
+              <span className="page-breadcrumb">
+                {meta.parentLabel} / {meta.label}
+              </span>
+            )}
+          </div>
+          <button type="button" className="page-primary-btn" disabled>
+            + Button
+          </button>
         </header>
 
-        <div className="filters-panel filters-panel--v2" role="region" aria-label="Filters">
-          <div className="filters-panel-inner filters-panel-inner--v2">
-            <FiltersActionsRow variant="v2" />
-            <div className="filters-panel-fields filters-panel-fields--v2" id="filters-panel-body">
+        <div className="filters-panel" role="region" aria-label="Filters">
+          <div className="filters-panel-inner">
+            <div className="filters-panel-fields" id="filters-panel-body">
               {fields}
             </div>
+            <FiltersActionsRow variant="v1" />
           </div>
         </div>
       </>
     );
   }
 
-  return (
-    <>
-      <header className="page-header page-header--main">
-        <div className="page-header-primary">
-          <h1 className="page-title">{meta?.label}</h1>
-          <a className="page-doc-link" href="#">
-            <span className="page-doc-link__text">Learn about {meta?.label}</span>
-            <SideIcon icon={ExternalLinkGlyph} className="page-doc-link__icon" />
-          </a>
-          {meta?.parentLabel && (
-            <span className="page-breadcrumb">
-              {meta.parentLabel} / {meta.label}
-            </span>
-          )}
-        </div>
-        <button type="button" className="page-primary-btn" disabled>
-          + Button
-        </button>
-      </header>
-
-      <div className="filters-panel" role="region" aria-label="Filters">
-        <div className="filters-panel-inner">
-          <div className="filters-panel-fields" id="filters-panel-body">
-            {fields}
-          </div>
-          <FiltersActionsRow variant="v1" />
-        </div>
-      </div>
-    </>
-  );
+  return <MainViewV2Chrome meta={meta} />;
 }
 
 const CHART_BAR_HEIGHTS = [45, 70, 55, 90, 65, 80, 50, 75, 60, 85, 40, 70];
