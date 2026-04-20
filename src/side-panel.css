@@ -650,11 +650,18 @@ body {
 .main-view {
   display: none;
   flex-direction: column;
-  gap: var(--space-600);
+  gap: 0;
   padding: var(--space-700);
 }
 .main-view.visible {
   display: flex;
+}
+/* Vertical rhythm: 32px under header; 16px (spec 16pt) filters → table skeleton */
+.main-view > .page-header {
+  margin-bottom: var(--space-600);
+}
+.main-view > .filters-section {
+  margin-bottom: var(--space-400);
 }
 
 /* ── Page header ── */
@@ -978,9 +985,9 @@ body {
   display: none !important;
 }
 
-/* React root fills viewport (reference layout) */
+/* React root fills viewport (reference layout).
+   Do not set body { height: 100% } here — it overrides body { height: 100vh } and can break the flex chain. */
 html,
-body,
 #root {
   height: 100%;
 }
