@@ -77,12 +77,6 @@ const ALL_FILTERS = [
   { id: "refund", label: "Refund", description: "Refund status" },
   { id: "cardholder-name", label: "Cardholder name", description: "First name, Second name" },
   { id: "descriptor", label: "Descriptor", description: "Statement descriptor text" },
-  { id: "payment-type", label: "Payment type", description: "Card, APM, or other method" },
-  { id: "card-brand", label: "Card brand", description: "Visa, Mastercard, Amex and more" },
-  { id: "card-number", label: "Card number", description: "Last 4 digits or full number" },
-  { id: "country", label: "Country", description: "Customer or card country" },
-  { id: "3ds-status", label: "3DS status", description: "3D Secure verification result" },
-  { id: "error-code", label: "Error code", description: "Decline or error reason code" },
 ];
 
 const DEFAULT_ADDED_IDS = ["order-id", "email", "created", "updated"];
@@ -107,11 +101,6 @@ const DEFAULT_PRESETS = [
     id: "management",
     label: "Management",
     filters: ["order-id", "amount", "currency", "status", "channel"],
-  },
-  {
-    id: "development",
-    label: "Developement",
-    filters: ["order-id", "error-code", "3ds-status", "status", "channel"],
   },
 ];
 
@@ -185,15 +174,15 @@ function ArrowDownIcon() {
 }
 
 /* ─── Customize Filters Popover ─── */
-function CustomizeFiltersPopover({ anchorRef, onClose, onSave }) {
+function CustomizeFiltersPopover({ anchorRef, onClose, onSave, personalPresets, onPersonalPresetsChange }) {
   const [selectedPreset, setSelectedPreset] = useState(null);
   const [addedIds, setAddedIds] = useState(() => [...DEFAULT_ADDED_IDS]);
-  const [personalPresets, setPersonalPresets] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [savingPreset, setSavingPreset] = useState(false);
   const [presetName, setPresetName] = useState("");
   const [availableSort, setAvailableSort] = useState("asc"); // "asc" | "desc"
-  const [dragOverId, setDragOverId] = useState(null);
+  const [previewIds, setPreviewIds] = useState(null); // live drag preview order
+  const [draggingId, setDraggingId] = useState(null); // for CSS class during render
   const dragItemId = useRef(null);
   const popoverRef = useRef(null);
   const presetInputRef = useRef(null);
@@ -235,16 +224,17 @@ function CustomizeFiltersPopover({ anchorRef, onClose, onSave }) {
     return () => cancelAnimationFrame(id);
   }, [anchorRef]);
 
-  /* Click outside → close */
+  /* Click outside → close (ignore clicks on the anchor button — it handles its own toggle) */
   useEffect(() => {
     const handler = (e) => {
+      if (anchorRef?.current?.contains(e.target)) return;
       if (popoverRef.current && !popoverRef.current.contains(e.target)) {
         onClose();
       }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [onClose]);
+  }, [onClose, anchorRef]);
 
   /* Escape key → close */
   useEffect(() => {
@@ -285,9 +275,9 @@ function CustomizeFiltersPopover({ anchorRef, onClose, onSave }) {
 
   /* Delete personal preset */
   const deletePersonalPreset = useCallback((presetId) => {
-    setPersonalPresets((prev) => prev.filter((p) => p.id !== presetId));
+    onPersonalPresetsChange((prev) => prev.filter((p) => p.id !== presetId));
     setSelectedPreset((cur) => (cur === presetId ? null : cur));
-  }, []);
+  }, [onPersonalPresetsChange]);
 
   /* Save as preset */
   const handleSavePreset = useCallback(() => {
@@ -303,11 +293,11 @@ function CustomizeFiltersPopover({ anchorRef, onClose, onSave }) {
       label: name,
       filters: [...addedIds],
     };
-    setPersonalPresets((prev) => [...prev, newPreset]);
+    onPersonalPresetsChange((prev) => [...prev, newPreset]);
     setSelectedPreset(newPreset.id);
     setSavingPreset(false);
     setPresetName("");
-  }, [savingPreset, presetName, addedIds]);
+  }, [savingPreset, presetName, addedIds, onPersonalPresetsChange]);
 
   const handlePresetKeyDown = useCallback(
     (e) => {
@@ -331,39 +321,72 @@ function CustomizeFiltersPopover({ anchorRef, onClose, onSave }) {
   }, [savingPreset, onClose]);
 
   /* ── Drag and drop for Added filters ── */
+  const computePreview = useCallback((base, srcId, targetId) => {
+    if (!srcId || srcId === targetId) return base;
+    const next = [...base];
+    const srcIdx = next.indexOf(srcId);
+    const tgtIdx = next.indexOf(targetId);
+    if (srcIdx === -1 || tgtIdx === -1) return base;
+    next.splice(srcIdx, 1);
+    next.splice(tgtIdx, 0, srcId);
+    return next;
+  }, []);
+
   const handleDragStart = useCallback((e, filterId) => {
     dragItemId.current = filterId;
     e.dataTransfer.effectAllowed = "move";
-    e.currentTarget.classList.add("cf-filter-row--dragging");
-  }, []);
 
-  const handleDragEnd = useCallback((e) => {
+    /* Elevated ghost — clone element at its real position so browser can render it */
+    try {
+      const src = e.currentTarget;
+      const rect = src.getBoundingClientRect();
+      const ghost = src.cloneNode(true);
+      ghost.style.cssText = [
+        "position:fixed",
+        `top:${rect.top}px`,
+        `left:${rect.left}px`,
+        `width:${rect.width}px`,
+        "margin:0",
+        "background:#fff",
+        "border:1px solid rgba(0,0,0,0.12)",
+        "border-radius:4px",
+        "box-shadow:0px 6px 8px -6px rgba(0,0,0,0.12),0px 8px 16px -6px rgba(0,0,0,0.08)",
+        "pointer-events:none",
+        "z-index:-1",
+      ].join(";");
+      document.body.appendChild(ghost);
+      e.dataTransfer.setDragImage(ghost, e.clientX - rect.left, e.clientY - rect.top);
+      requestAnimationFrame(() => {
+        if (document.body.contains(ghost)) document.body.removeChild(ghost);
+      });
+    } catch { /* fallback to browser default ghost */ }
+
+    setDraggingId(filterId);
+    // kick off preview with current order
+    setPreviewIds((prev) => prev ?? [...addedIds]);
+  }, [addedIds]);
+
+  const handleDragEnd = useCallback(() => {
+    // commit preview to real order (handles both drop and cancel)
+    setAddedIds((prev) => previewIds ?? prev);
     dragItemId.current = null;
-    setDragOverId(null);
-    e.currentTarget.classList.remove("cf-filter-row--dragging");
-  }, []);
+    setDraggingId(null);
+    setPreviewIds(null);
+  }, [previewIds]);
 
   const handleDragOver = useCallback((e, filterId) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
-    setDragOverId(filterId);
-  }, []);
+    const srcId = dragItemId.current;
+    if (!srcId || srcId === filterId) return;
+    setPreviewIds((prev) => computePreview(prev ?? addedIds, srcId, filterId));
+  }, [addedIds, computePreview]);
 
   const handleDrop = useCallback((e, targetId) => {
     e.preventDefault();
     const srcId = dragItemId.current;
-    if (!srcId || srcId === targetId) { setDragOverId(null); return; }
-    setAddedIds((prev) => {
-      const next = [...prev];
-      const srcIdx = next.indexOf(srcId);
-      const tgtIdx = next.indexOf(targetId);
-      if (srcIdx === -1 || tgtIdx === -1) return prev;
-      next.splice(srcIdx, 1);
-      next.splice(tgtIdx, 0, srcId);
-      return next;
-    });
-    setSelectedPreset(null);
-    setDragOverId(null);
+    if (srcId && srcId !== targetId) setSelectedPreset(null);
+    // actual commit happens in handleDragEnd
   }, []);
 
   /* ── Sort toggle for Available ── */
@@ -374,8 +397,11 @@ function CustomizeFiltersPopover({ anchorRef, onClose, onSave }) {
   /* Search: filter by name AND description */
   const q = searchQuery.trim().toLowerCase();
 
-  /* Added filters preserve addedIds order */
-  const addedFilters = addedIds
+  /* During drag show preview order; otherwise committed order */
+  const displayIds = previewIds ?? addedIds;
+
+  /* Added filters preserve displayIds order */
+  const addedFilters = displayIds
     .map((id) => ALL_FILTERS.find((f) => f.id === id))
     .filter(Boolean);
   const availableFilters = ALL_FILTERS.filter((f) => !addedIds.includes(f.id));
@@ -490,8 +516,8 @@ function CustomizeFiltersPopover({ anchorRef, onClose, onSave }) {
 
         {/* ── Right: Filters ── */}
         <div className="cf-filters">
-          {/* Search */}
-          <div className="cf-filters-search-group">
+          {/* Sticky header with gradient fade */}
+          <div className="cf-filters-header">
             <div className="cf-filters-heading">
               <span className="cf-filters-heading__text">Filters</span>
             </div>
@@ -529,7 +555,7 @@ function CustomizeFiltersPopover({ anchorRef, onClose, onSave }) {
                   {filteredAdded.map((f) => (
                     <div
                       key={f.id}
-                      className={`cf-filter-row${dragOverId === f.id ? " cf-filter-row--drag-over" : ""}`}
+                      className={`cf-filter-row${draggingId === f.id ? " cf-filter-row--dragging" : ""}`}
                       draggable
                       onDragStart={(e) => handleDragStart(e, f.id)}
                       onDragEnd={handleDragEnd}
@@ -609,7 +635,7 @@ function CustomizeFiltersPopover({ anchorRef, onClose, onSave }) {
             Cancel
           </button>
           <button type="button" className="cf-footer__btn cf-footer__btn--save" onClick={handleSavePreset}>
-            Save as preset
+            {savingPreset ? "Save" : "Save as preset"}
           </button>
         </div>
       </div>
@@ -760,6 +786,7 @@ export default function App() {
   const [filtersExpanded, setFiltersExpanded] = useState(true);
   const [filtersSearch, setFiltersSearch] = useState("");
   const [customizeOpen, setCustomizeOpen] = useState(false);
+  const [personalPresets, setPersonalPresets] = useState([]);
   const customizeBtnRef = useRef(null);
   const sidebarContainerRef = useRef(null);
   const navPopoverRef = useRef(null);
@@ -1358,6 +1385,8 @@ export default function App() {
           anchorRef={customizeBtnRef}
           onClose={() => setCustomizeOpen(false)}
           onSave={() => setCustomizeOpen(false)}
+          personalPresets={personalPresets}
+          onPersonalPresetsChange={setPersonalPresets}
         />
       )}
 

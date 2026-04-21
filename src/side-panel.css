@@ -1617,15 +1617,25 @@ html,
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-300);
-  padding: var(--space-400) var(--space-600);
-  overflow: hidden;
 }
 
-.cf-filters-search-group {
+/* Sticky header — label + search — gradient overlaps top of scroll area */
+.cf-filters-header {
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   gap: var(--space-200);
+  padding: var(--space-400) var(--space-400) var(--space-300);
+  /* Extend header 16px into scroll area */
+  padding-bottom: calc(var(--space-300) + 16px);
+  margin-bottom: -16px;
+  position: relative;
+  z-index: 1;
+  background: linear-gradient(
+    to bottom,
+    var(--color-soft-100) calc(100% - 16px),
+    transparent 100%
+  );
 }
 
 .cf-filters-heading {
@@ -1655,6 +1665,7 @@ html,
   background: var(--color-soft-100);
   box-shadow: 0px 2px 4px -2px rgba(0, 0, 0, 0.12);
 }
+
 
 .cf-filters-search__icon {
   display: flex;
@@ -1696,6 +1707,7 @@ html,
   display: flex;
   flex-direction: column;
   gap: var(--space-300);
+  padding: 0 var(--space-400) var(--space-400);
   scrollbar-width: none;
 }
 .cf-filters-scroll::-webkit-scrollbar { display: none; }
@@ -1711,8 +1723,7 @@ html,
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 28px;
-  padding: 0;
+  padding: var(--space-200) var(--space-200) 4px;
 }
 
 .cf-filter-section__title {
@@ -1776,9 +1787,10 @@ html,
   display: flex;
   align-items: flex-start;
   gap: var(--space-200);
-  padding: var(--space-100) 0;
+  padding: var(--space-100) var(--space-200) var(--space-100) var(--space-100);
   border-radius: var(--radius-sm);
   background: var(--color-soft-100);
+  transition: opacity 150ms ease;
 }
 
 .cf-filter-row__drag {
@@ -1872,13 +1884,12 @@ html,
 
 /* Drag and drop states */
 .cf-filter-row--dragging {
-  opacity: 0.4;
+  background: var(--color-soft-300);
+  height: 48px;
 }
-.cf-filter-row--drag-over {
-  border-top: 2px solid var(--color-dense-900);
-  margin-top: -2px;
+.cf-filter-row--dragging > * {
+  visibility: hidden;
 }
-
 /* No results */
 .cf-no-results {
   padding: var(--space-400) 0;
