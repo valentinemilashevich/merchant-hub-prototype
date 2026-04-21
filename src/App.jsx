@@ -9,6 +9,11 @@ import ChevronVerticalGlyph from "./assets/icons/chevron-vertical.svg?react";
 import DashboardGlyph from "./assets/icons/dashboard.svg?react";
 import DevelopersGlyph from "./assets/icons/developers.svg?react";
 import ExternalLinkGlyph from "./assets/icons/external-link.svg?react";
+import FiltersGlyph from "./assets/icons/filters.svg?react";
+import PlusGlyph from "./assets/icons/plus.svg?react";
+import SettingsCustomizeGlyph from "./assets/icons/settings-customize.svg?react";
+import SettingsViewGlyph from "./assets/icons/settings-view.svg?react";
+import SortGlyph from "./assets/icons/sort.svg?react";
 import FinancesGlyph from "./assets/icons/finances.svg?react";
 import FraudPreventionGlyph from "./assets/icons/fraud-prevention.svg?react";
 import PaymentsGlyph from "./assets/icons/payments.svg?react";
@@ -16,25 +21,16 @@ import ReportsExportsGlyph from "./assets/icons/reports-exports.svg?react";
 import RouteGlyph from "./assets/icons/route.svg?react";
 import SearchGlyph from "./assets/icons/search.svg?react";
 import SidebarCollapseGlyph from "./assets/icons/sidebar-collapse.svg?react";
-import SidebarExpandGlyph from "./assets/icons/sidebar-expand.svg?react";
 import TaxesGlyph from "./assets/icons/taxes.svg?react";
 
 import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { cn } from "@/lib/utils";
-
-import {
-  NAV_SECTIONS,
+  NAV_SECTIONS_V1,
+  NAV_SECTIONS_V2,
   SKIP_RECENT_IDS,
   buildSearchIndex,
   findParentGroupId,
   getMetaForId,
+  isValidNavId,
 } from "./navConfig.js";
 
 /** Inline calendar icon for date filter fields (Figma: calendar on date inputs) */
@@ -61,88 +57,608 @@ function CalendarGlyph({ className }) {
 }
 
 const FILTER_FIELDS = [
-  {
-    id: "status",
-    label: "Status",
-    kind: "select",
-    options: [
-      { value: "pending", label: "Pending" },
-      { value: "approved", label: "Approved" },
-      { value: "declined", label: "Declined" },
-      { value: "refunded", label: "Refunded" },
-    ],
-  },
-  {
-    id: "status-alt",
-    label: "Status",
-    ariaLabel: "Status, secondary",
-    kind: "select",
-    options: [
-      { value: "processing", label: "Processing" },
-      { value: "completed", label: "Completed" },
-      { value: "failed", label: "Failed" },
-    ],
-  },
-  {
-    id: "refund",
-    label: "Refund",
-    kind: "select",
-    options: [
-      { value: "none", label: "None" },
-      { value: "partial", label: "Partial" },
-      { value: "full", label: "Full" },
-    ],
-  },
-  {
-    id: "channel",
-    label: "Channel",
-    kind: "select",
-    options: [
-      { value: "card", label: "Card" },
-      { value: "apple-pay", label: "Apple Pay" },
-      { value: "google-pay", label: "Google Pay" },
-      { value: "bank-transfer", label: "Bank transfer" },
-    ],
-  },
   { id: "order-id", label: "Order ID", kind: "text" },
-  { id: "email", label: "Email", kind: "text" },
-  { id: "created-from", label: "Created at from", kind: "date" },
-  { id: "created-to", label: "Created at to", kind: "date" },
-  { id: "updated-from", label: "Updated at from", kind: "date" },
-  { id: "updated-to", label: "Updated at to", kind: "date" },
-  { id: "amount", label: "Amount", kind: "amount" },
-  {
-    id: "currency",
-    label: "Currency",
-    kind: "select",
-    options: [
-      { value: "usd", label: "USD" },
-      { value: "eur", label: "EUR" },
-      { value: "gbp", label: "GBP" },
-    ],
-  },
-  { id: "customer-id", label: "Customer ID", kind: "text" },
-  { id: "cardholder", label: "Cardholder name", kind: "text" },
-  { id: "descriptor", label: "Descriptor", kind: "text" },
+  { id: "customer-email", label: "Customer email", kind: "text" },
+  { id: "channel", label: "Channel", kind: "select" },
+  { id: "payment-type", label: "Payment type", kind: "select" },
 ];
 
-/** Перший блок фільтрів (2×2): Status ×2, Refund, Channel — відступи як у shadcn Field. */
-const PRIMARY_FILTER_IDS = new Set(["status", "status-alt", "refund", "channel"]);
+/* ─── Customize Filters: full filter catalogue ─── */
+const ALL_FILTERS = [
+  { id: "order-id", label: "Order ID", description: "by order identifier" },
+  { id: "email", label: "Email", description: "by customer email adress" },
+  { id: "created", label: "Created", description: "Transaction creation date" },
+  { id: "updated", label: "Updated", description: "Transaction update date" },
+  { id: "channel", label: "Channel", description: "Transaction date has been updated." },
+  { id: "amount", label: "Amount", description: "Amount in USD, EUR, GBP or other" },
+  { id: "currency", label: "Currency", description: "USD, EUR, GBP and more" },
+  { id: "customer-id", label: "Customer ID", description: "By customer identifier" },
+  { id: "status", label: "Status", description: "Actual transaction status" },
+  { id: "refund", label: "Refund", description: "Refund status" },
+  { id: "cardholder-name", label: "Cardholder name", description: "First name, Second name" },
+  { id: "descriptor", label: "Descriptor", description: "Statement descriptor text" },
+  { id: "payment-type", label: "Payment type", description: "Card, APM, or other method" },
+  { id: "card-brand", label: "Card brand", description: "Visa, Mastercard, Amex and more" },
+  { id: "card-number", label: "Card number", description: "Last 4 digits or full number" },
+  { id: "country", label: "Country", description: "Customer or card country" },
+  { id: "3ds-status", label: "3DS status", description: "3D Secure verification result" },
+  { id: "error-code", label: "Error code", description: "Decline or error reason code" },
+];
 
-const RECENT_STORAGE_KEY = "merchant-hub-recent-v1";
+const DEFAULT_ADDED_IDS = ["order-id", "email", "created", "updated"];
+
+const DEFAULT_PRESETS = [
+  {
+    id: "finances",
+    label: "Finances",
+    filters: ["order-id", "amount", "currency", "status", "created", "updated"],
+  },
+  {
+    id: "data-analytics",
+    label: "Data analytics",
+    filters: ["order-id", "channel", "status", "country", "card-brand", "created"],
+  },
+  {
+    id: "customer-support",
+    label: "Customer support",
+    filters: ["order-id", "email", "customer-id", "status", "cardholder-name"],
+  },
+  {
+    id: "management",
+    label: "Management",
+    filters: ["order-id", "amount", "currency", "status", "channel"],
+  },
+  {
+    id: "development",
+    label: "Developement",
+    filters: ["order-id", "error-code", "3ds-status", "status", "channel"],
+  },
+];
+
+/* ─── Drag handle icon (6-dot grip) ─── */
+function DragHandleIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+      <circle cx="6" cy="4" r="1" fill="#8F8F8F" />
+      <circle cx="10" cy="4" r="1" fill="#8F8F8F" />
+      <circle cx="6" cy="8" r="1" fill="#8F8F8F" />
+      <circle cx="10" cy="8" r="1" fill="#8F8F8F" />
+      <circle cx="6" cy="12" r="1" fill="#8F8F8F" />
+      <circle cx="10" cy="12" r="1" fill="#8F8F8F" />
+    </svg>
+  );
+}
+
+/* ─── Toggle switch (animates before firing onChange) ─── */
+const TOGGLE_ANIM_MS = 220;
+
+function ToggleSwitch({ checked, onChange }) {
+  const [animating, setAnimating] = useState(null); // "on" | "off" | null
+  const timerRef = useRef(null);
+
+  const handleClick = useCallback(() => {
+    if (timerRef.current) return;
+    const direction = checked ? "off" : "on";
+    setAnimating(direction);
+    timerRef.current = setTimeout(() => {
+      timerRef.current = null;
+      setAnimating(null);
+      onChange();
+    }, TOGGLE_ANIM_MS);
+  }, [checked, onChange]);
+
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+
+  /* While animating, show the TARGET visual state; otherwise show checked */
+  const visual = animating ? (animating === "on") : checked;
+  const animClass = animating === "on" ? " cf-toggle--anim-on" : animating === "off" ? " cf-toggle--anim-off" : "";
+
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={visual}
+      className={`cf-toggle${visual ? " cf-toggle--on" : ""}${animClass}`}
+      onClick={handleClick}
+    >
+      <span className="cf-toggle__thumb" />
+    </button>
+  );
+}
+
+/* ─── Close (X) icon for preset deletion ─── */
+function CloseSmallIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+      <path d="M11.33 4.67L4.67 11.33M4.67 4.67l6.66 6.66" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/* ─── Arrow-down icon for "Available" header ─── */
+function ArrowDownIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+      <path d="M8 3.33v9.34M8 12.67l-3.33-3.34M8 12.67l3.33-3.34" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/* ─── Customize Filters Popover ─── */
+function CustomizeFiltersPopover({ anchorRef, onClose, onSave }) {
+  const [selectedPreset, setSelectedPreset] = useState(null);
+  const [addedIds, setAddedIds] = useState(() => [...DEFAULT_ADDED_IDS]);
+  const [personalPresets, setPersonalPresets] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [savingPreset, setSavingPreset] = useState(false);
+  const [presetName, setPresetName] = useState("");
+  const [availableSort, setAvailableSort] = useState("asc"); // "asc" | "desc"
+  const [dragOverId, setDragOverId] = useState(null);
+  const dragItemId = useRef(null);
+  const popoverRef = useRef(null);
+  const presetInputRef = useRef(null);
+  const [positioned, setPositioned] = useState(false);
+
+  /* Position popover anchored to the Customize button — runs after first paint */
+  useLayoutEffect(() => {
+    const anchor = anchorRef?.current;
+    const pop = popoverRef.current;
+    if (!anchor || !pop) return;
+
+    const reposition = () => {
+      const ar = anchor.getBoundingClientRect();
+      const pw = pop.offsetWidth;
+      const ph = pop.offsetHeight;
+
+      /* Try to place bottom-left of popover at top-left of button */
+      let top = ar.top - ph - 8;
+      let left = ar.left;
+
+      /* If it overflows the top of the viewport, place below */
+      if (top < 8) top = ar.bottom + 8;
+
+      /* Clamp horizontal */
+      if (left + pw > window.innerWidth - 8) left = window.innerWidth - pw - 8;
+      if (left < 8) left = 8;
+
+      /* Clamp vertical to viewport */
+      if (top + ph > window.innerHeight - 8) top = window.innerHeight - ph - 8;
+      if (top < 8) top = 8;
+
+      pop.style.top = top + "px";
+      pop.style.left = left + "px";
+      setPositioned(true);
+    };
+
+    /* Use rAF to ensure layout is computed */
+    const id = requestAnimationFrame(reposition);
+    return () => cancelAnimationFrame(id);
+  }, [anchorRef]);
+
+  /* Click outside → close */
+  useEffect(() => {
+    const handler = (e) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target)) {
+        onClose();
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [onClose]);
+
+  /* Escape key → close */
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  /* Select a preset → load its filters */
+  const handleSelectPreset = useCallback((preset) => {
+    setSelectedPreset(preset.id);
+    setAddedIds([...preset.filters]);
+  }, []);
+
+  /* Toggle a filter on/off */
+  const toggleFilter = useCallback((filterId) => {
+    setAddedIds((prev) =>
+      prev.includes(filterId)
+        ? prev.filter((id) => id !== filterId)
+        : [...prev, filterId]
+    );
+    setSelectedPreset(null);
+  }, []);
+
+  /* Clear all added */
+  const clearAll = useCallback(() => {
+    setAddedIds([]);
+    setSelectedPreset(null);
+  }, []);
+
+  /* Select all available */
+  const selectAll = useCallback(() => {
+    setAddedIds(ALL_FILTERS.map((f) => f.id));
+    setSelectedPreset(null);
+  }, []);
+
+  /* Delete personal preset */
+  const deletePersonalPreset = useCallback((presetId) => {
+    setPersonalPresets((prev) => prev.filter((p) => p.id !== presetId));
+    setSelectedPreset((cur) => (cur === presetId ? null : cur));
+  }, []);
+
+  /* Save as preset */
+  const handleSavePreset = useCallback(() => {
+    if (!savingPreset) {
+      setSavingPreset(true);
+      setTimeout(() => presetInputRef.current?.focus(), 0);
+      return;
+    }
+    const name = presetName.trim();
+    if (!name) return;
+    const newPreset = {
+      id: `personal-${Date.now()}`,
+      label: name,
+      filters: [...addedIds],
+    };
+    setPersonalPresets((prev) => [...prev, newPreset]);
+    setSelectedPreset(newPreset.id);
+    setSavingPreset(false);
+    setPresetName("");
+  }, [savingPreset, presetName, addedIds]);
+
+  const handlePresetKeyDown = useCallback(
+    (e) => {
+      if (e.key === "Enter") handleSavePreset();
+      if (e.key === "Escape") {
+        setSavingPreset(false);
+        setPresetName("");
+      }
+    },
+    [handleSavePreset]
+  );
+
+  /* Cancel */
+  const handleCancel = useCallback(() => {
+    if (savingPreset) {
+      setSavingPreset(false);
+      setPresetName("");
+      return;
+    }
+    onClose();
+  }, [savingPreset, onClose]);
+
+  /* ── Drag and drop for Added filters ── */
+  const handleDragStart = useCallback((e, filterId) => {
+    dragItemId.current = filterId;
+    e.dataTransfer.effectAllowed = "move";
+    e.currentTarget.classList.add("cf-filter-row--dragging");
+  }, []);
+
+  const handleDragEnd = useCallback((e) => {
+    dragItemId.current = null;
+    setDragOverId(null);
+    e.currentTarget.classList.remove("cf-filter-row--dragging");
+  }, []);
+
+  const handleDragOver = useCallback((e, filterId) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverId(filterId);
+  }, []);
+
+  const handleDrop = useCallback((e, targetId) => {
+    e.preventDefault();
+    const srcId = dragItemId.current;
+    if (!srcId || srcId === targetId) { setDragOverId(null); return; }
+    setAddedIds((prev) => {
+      const next = [...prev];
+      const srcIdx = next.indexOf(srcId);
+      const tgtIdx = next.indexOf(targetId);
+      if (srcIdx === -1 || tgtIdx === -1) return prev;
+      next.splice(srcIdx, 1);
+      next.splice(tgtIdx, 0, srcId);
+      return next;
+    });
+    setSelectedPreset(null);
+    setDragOverId(null);
+  }, []);
+
+  /* ── Sort toggle for Available ── */
+  const toggleSort = useCallback(() => {
+    setAvailableSort((prev) => (prev === "asc" ? "desc" : "asc"));
+  }, []);
+
+  /* Search: filter by name AND description */
+  const q = searchQuery.trim().toLowerCase();
+
+  /* Added filters preserve addedIds order */
+  const addedFilters = addedIds
+    .map((id) => ALL_FILTERS.find((f) => f.id === id))
+    .filter(Boolean);
+  const availableFilters = ALL_FILTERS.filter((f) => !addedIds.includes(f.id));
+
+  const filteredAdded = q
+    ? addedFilters.filter(
+        (f) =>
+          f.label.toLowerCase().includes(q) ||
+          f.description.toLowerCase().includes(q)
+      )
+    : addedFilters;
+
+  const filteredAvailableUnsorted = q
+    ? availableFilters.filter(
+        (f) =>
+          f.label.toLowerCase().includes(q) ||
+          f.description.toLowerCase().includes(q)
+      )
+    : availableFilters;
+
+  const filteredAvailable = [...filteredAvailableUnsorted].sort((a, b) => {
+    const cmp = a.label.localeCompare(b.label);
+    return availableSort === "asc" ? cmp : -cmp;
+  });
+
+  return (
+    <div className={`cf-popover${positioned ? " cf-popover--visible" : ""}`} ref={popoverRef}>
+      {/* ── Content area ── */}
+      <div className="cf-body">
+        {/* ── Left: Presets ── */}
+        <div className="cf-presets">
+          <div className="cf-presets-inner">
+            {/* Default presets */}
+            <div className="cf-preset-group">
+              <div className="cf-preset-heading">
+                <span className="cf-preset-heading__text">Presets</span>
+              </div>
+              <div className="cf-preset-list">
+                {DEFAULT_PRESETS.map((p) => (
+                  <div
+                    key={p.id}
+                    className={`cf-preset-item${selectedPreset === p.id ? " cf-preset-item--active" : ""}`}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleSelectPreset(p)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleSelectPreset(p);
+                      }
+                    }}
+                  >
+                    <span className="cf-preset-item__label">{p.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Personal presets */}
+            {(personalPresets.length > 0 || savingPreset) && (
+              <div className="cf-preset-group">
+                <div className="cf-preset-heading">
+                  <span className="cf-preset-heading__text">Personal</span>
+                </div>
+                <div className="cf-preset-list">
+                  {personalPresets.map((p) => (
+                    <div
+                      key={p.id}
+                      className={`cf-preset-item cf-preset-item--personal${selectedPreset === p.id ? " cf-preset-item--active" : ""}`}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => handleSelectPreset(p)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          handleSelectPreset(p);
+                        }
+                      }}
+                    >
+                      <span className="cf-preset-item__label">{p.label}</span>
+                      <button
+                        type="button"
+                        className="cf-preset-item__delete"
+                        aria-label={`Delete ${p.label}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deletePersonalPreset(p.id);
+                        }}
+                      >
+                        <CloseSmallIcon />
+                      </button>
+                    </div>
+                  ))}
+                  {savingPreset && (
+                    <div className="cf-preset-item cf-preset-item--editing">
+                      <input
+                        ref={presetInputRef}
+                        className="cf-preset-item__input"
+                        type="text"
+                        placeholder="Preset name"
+                        value={presetName}
+                        onChange={(e) => setPresetName(e.target.value)}
+                        onKeyDown={handlePresetKeyDown}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Right: Filters ── */}
+        <div className="cf-filters">
+          {/* Search */}
+          <div className="cf-filters-search-group">
+            <div className="cf-filters-heading">
+              <span className="cf-filters-heading__text">Filters</span>
+            </div>
+            <div className="cf-filters-search">
+              <div className="cf-filters-search__icon">
+                <SideIcon icon={SearchGlyph} />
+              </div>
+              <input
+                className="cf-filters-search__input"
+                type="text"
+                placeholder="Search filter"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </div>
+          </div>
+
+          <div className="cf-filters-scroll">
+            {/* Added section */}
+            {filteredAdded.length > 0 && (
+              <div className="cf-filter-section">
+                <div className="cf-filter-section__header">
+                  <span className="cf-filter-section__title">Added</span>
+                  <button
+                    type="button"
+                    className="cf-filter-section__action"
+                    onClick={clearAll}
+                  >
+                    Clear all
+                  </button>
+                </div>
+                <div className="cf-filter-list">
+                  {filteredAdded.map((f) => (
+                    <div
+                      key={f.id}
+                      className={`cf-filter-row${dragOverId === f.id ? " cf-filter-row--drag-over" : ""}`}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, f.id)}
+                      onDragEnd={handleDragEnd}
+                      onDragOver={(e) => handleDragOver(e, f.id)}
+                      onDrop={(e) => handleDrop(e, f.id)}
+                    >
+                      <div className="cf-filter-row__drag">
+                        <DragHandleIcon />
+                      </div>
+                      <div className="cf-filter-row__info">
+                        <span className="cf-filter-row__label">{f.label}</span>
+                        <span className="cf-filter-row__desc">{f.description}</span>
+                      </div>
+                      <ToggleSwitch
+                        checked={true}
+                        onChange={() => toggleFilter(f.id)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Available section */}
+            {filteredAvailable.length > 0 && (
+              <div className="cf-filter-section">
+                <div className="cf-filter-section__header">
+                  <div className="cf-filter-section__title-with-icon">
+                    <span className="cf-filter-section__title">Available</span>
+                    <button
+                      type="button"
+                      className={`cf-filter-section__sort-btn${availableSort === "desc" ? " cf-filter-section__sort-btn--desc" : ""}`}
+                      onClick={toggleSort}
+                      aria-label={availableSort === "asc" ? "Sort Z to A" : "Sort A to Z"}
+                    >
+                      <ArrowDownIcon />
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    className="cf-filter-section__action"
+                    onClick={selectAll}
+                  >
+                    Select all
+                  </button>
+                </div>
+                <div className="cf-filter-list">
+                  {filteredAvailable.map((f) => (
+                    <div key={f.id} className="cf-filter-row cf-filter-row--available">
+                      <div className="cf-filter-row__drag cf-filter-row__drag--empty" />
+                      <div className="cf-filter-row__info">
+                        <span className="cf-filter-row__label">{f.label}</span>
+                        <span className="cf-filter-row__desc">{f.description}</span>
+                      </div>
+                      <ToggleSwitch
+                        checked={false}
+                        onChange={() => toggleFilter(f.id)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* No results */}
+            {filteredAdded.length === 0 && filteredAvailable.length === 0 && q && (
+              <div className="cf-no-results">No filters found</div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Footer ── */}
+      <div className="cf-footer">
+        <div className="cf-footer__actions">
+          <button type="button" className="cf-footer__btn cf-footer__btn--cancel" onClick={handleCancel}>
+            Cancel
+          </button>
+          <button type="button" className="cf-footer__btn cf-footer__btn--save" onClick={handleSavePreset}>
+            Save as preset
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Skeleton table row widths (Figma node 374:10465).
+ * Each sub-array holds percentage widths for 5 columns.
+ */
+const SK_TABLE_ROWS = [
+  [53, 67, 56, 46, 32],
+  [77, 43, 70, 56, 28],
+  [63, 76, 46, 65, 44],
+  [53, 67, 56, 46, 32],
+  [77, 43, 70, 56, 28],
+  [67, 52, 60, 42, 32],
+  [53, 67, 56, 46, 32],
+  [48, 62, 74, 51, 36],
+  [63, 76, 46, 65, 44],
+  [48, 62, 74, 51, 36],
+  [72, 38, 56, 65, 40],
+  [67, 52, 60, 42, 32],
+  [63, 76, 46, 65, 44],
+  [63, 76, 46, 65, 44],
+];
+
+const VERSION_STORAGE_KEY = "merchant-hub-ui-version";
 const SIDEBAR_SESSION_KEY = "merchant-hub-sidebar-collapsed";
-const LAYOUT_VERSION_KEY = "merchant-hub-layout-version";
 const RECENT_MAX = 7;
 
-/** Default v2; v1 залишається для порівняння. */
-function readLayoutVersion() {
-  if (typeof localStorage === "undefined") return 2;
+function readUiVersion() {
+  if (typeof localStorage === "undefined") return "v1";
   try {
-    const v = localStorage.getItem(LAYOUT_VERSION_KEY);
-    if (v === null) return 2;
-    return v === "2" ? 2 : 1;
+    return localStorage.getItem(VERSION_STORAGE_KEY) === "v2" ? "v2" : "v1";
   } catch {
-    return 2;
+    return "v1";
+  }
+}
+
+function loadRecentForVersion(version) {
+  try {
+    const raw = localStorage.getItem(`merchant-hub-recent-${version}`);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((x) => x?.id && x?.label) : [];
+  } catch {
+    return [];
   }
 }
 
@@ -179,7 +695,7 @@ function SideIcon({ icon, className = "", size = 16 }) {
   });
 }
 
-function renderFilterInputV1(field) {
+function renderFilterInput(field) {
   switch (field.kind) {
     case "date":
       return (
@@ -212,197 +728,7 @@ function renderFilterInputV1(field) {
   }
 }
 
-function mapV1FilterFieldRows() {
-  return FILTER_FIELDS.map((f) => (
-    <div key={f.id} className="filters-field">
-      <p className="filters-field-label">{f.label}</p>
-      <div className="unit-textfield unit-textfield--sm">
-        <div className="unit-textfield__outline">
-          <div
-            className={
-              f.kind === "amount" ? "unit-textfield__field unit-textfield__field--split" : "unit-textfield__field"
-            }
-          >
-            {renderFilterInputV1(f)}
-          </div>
-        </div>
-      </div>
-    </div>
-  ));
-}
-
-function FiltersActionsRow({ variant }) {
-  const extra = variant === "v2" ? " filters-panel-actions--v2" : "";
-  return (
-    <div className={`filters-panel-actions${extra}`}>
-      <button type="button" className="filters-apply" disabled>
-        Apply
-      </button>
-      <button type="button" className="filters-clear" disabled>
-        Clear All
-      </button>
-    </div>
-  );
-}
-
-/** v2: Shadcn Select для полів kind === "select". */
-function MainViewV2Chrome({ meta }) {
-  const [selectValues, setSelectValues] = useState({});
-  const setSelect = useCallback((id, value) => {
-    setSelectValues((prev) => ({ ...prev, [id]: value }));
-  }, []);
-
-  const fields = FILTER_FIELDS.map((f) => (
-    <div
-      key={f.id}
-      className={cn(
-        "filters-field",
-        PRIMARY_FILTER_IDS.has(f.id) && "filters-field--primary-select",
-        f.id === "order-id" && "filters-field--after-primary-block"
-      )}
-    >
-      <p className="filters-field-label">{f.label}</p>
-      {f.kind === "select" ? (
-        <div className="unit-textfield unit-textfield--sm filters-shadcn-select">
-          <div className="unit-textfield__outline">
-            <div className="unit-textfield__field filters-shadcn-select__field">
-              <Select value={selectValues[f.id]} onValueChange={(v) => setSelect(f.id, v)}>
-                <SelectTrigger
-                  size="sm"
-                  className="filters-select-trigger"
-                  aria-label={f.ariaLabel ?? f.label}
-                >
-                  <SelectValue placeholder="Select" />
-                </SelectTrigger>
-                <SelectContent
-                  position="popper"
-                  align="start"
-                  sideOffset={4}
-                  className="filters-select-content"
-                >
-                  <SelectGroup className="filters-select-group">
-                    {f.options.map((o) => (
-                      <SelectItem key={o.value} value={o.value} className="filters-select-item">
-                        {o.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="unit-textfield unit-textfield--sm">
-          <div className="unit-textfield__outline">
-            <div
-              className={
-                f.kind === "amount" ? "unit-textfield__field unit-textfield__field--split" : "unit-textfield__field"
-              }
-            >
-              {renderFilterInputV1(f)}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  ));
-
-  return (
-    <>
-      <header className="page-header page-header--main page-header--v2">
-        <div className="page-header-v2-row">
-          <div className="page-header-v2-titles">
-            <h1 className="page-title">{meta?.label}</h1>
-            {meta?.parentLabel && (
-              <span className="page-breadcrumb">
-                {meta.parentLabel} / {meta.label}
-              </span>
-            )}
-          </div>
-          <div className="page-header-v2-cta">
-            <a className="page-doc-link" href="#">
-              <span className="page-doc-link__text">Learn about {meta?.label}</span>
-              <SideIcon icon={ExternalLinkGlyph} className="page-doc-link__icon" />
-            </a>
-            <button type="button" className="page-primary-btn" disabled>
-              + Button
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <div className="filters-panel filters-panel--v2" role="region" aria-label="Filters">
-        <div className="filters-panel-inner filters-panel-inner--v2">
-          <FiltersActionsRow variant="v2" />
-          <div className="filters-panel-fields filters-panel-fields--v2" id="filters-panel-body">
-            {fields}
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
-
-function MainViewChrome({ version, meta }) {
-  if (version === 1) {
-    const fields = mapV1FilterFieldRows();
-    return (
-      <>
-        <header className="page-header page-header--main">
-          <div className="page-header-primary">
-            <h1 className="page-title">{meta?.label}</h1>
-            <a className="page-doc-link" href="#">
-              <span className="page-doc-link__text">Learn about {meta?.label}</span>
-              <SideIcon icon={ExternalLinkGlyph} className="page-doc-link__icon" />
-            </a>
-            {meta?.parentLabel && (
-              <span className="page-breadcrumb">
-                {meta.parentLabel} / {meta.label}
-              </span>
-            )}
-          </div>
-          <button type="button" className="page-primary-btn" disabled>
-            + Button
-          </button>
-        </header>
-
-        <div className="filters-panel" role="region" aria-label="Filters">
-          <div className="filters-panel-inner">
-            <div className="filters-panel-fields" id="filters-panel-body">
-              {fields}
-            </div>
-            <FiltersActionsRow variant="v1" />
-          </div>
-        </div>
-      </>
-    );
-  }
-
-  return <MainViewV2Chrome meta={meta} />;
-}
-
-const CHART_BAR_HEIGHTS = [45, 70, 55, 90, 65, 80, 50, 75, 60, 85, 40, 70];
-
-const SK_TABLE_ROWS = [
-  [55, 70, 60, 50, 40],
-  [80, 45, 75, 60, 35],
-  [65, 80, 50, 70, 55],
-  [70, 55, 65, 45, 40],
-  [50, 65, 80, 55, 45],
-  [75, 40, 60, 70, 50],
-];
-
-function loadRecent() {
-  try {
-    const raw = localStorage.getItem(RECENT_STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter((x) => x?.id && x?.label) : [];
-  } catch {
-    return [];
-  }
-}
+/* Skeleton constants removed — replaced with live orders table */
 
 function highlightMatch(text, q) {
   if (!q.trim()) return text;
@@ -418,27 +744,34 @@ function highlightMatch(text, q) {
 }
 
 function readInitialActiveId() {
-  if (typeof window === "undefined") return null;
-  if (window.location.hash.includes("figmacapture")) return "dashboard";
-  return null;
+  return "dashboard";
 }
 
 export default function App() {
-  const searchIndex = useMemo(() => buildSearchIndex(NAV_SECTIONS), []);
+  const [uiVersion, setUiVersion] = useState(readUiVersion);
+  const navSections = uiVersion === "v2" ? NAV_SECTIONS_V2 : NAV_SECTIONS_V1;
+  const searchIndex = useMemo(() => buildSearchIndex(navSections), [navSections]);
   const [activeId, setActiveId] = useState(readInitialActiveId);
   const [expanded, setExpanded] = useState(() => new Set());
   const [query, setQuery] = useState("");
-  const [recentItems, setRecentItems] = useState(loadRecent);
+  const [recentItems, setRecentItems] = useState(() => loadRecentForVersion(readUiVersion()));
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => readSidebarCollapsed());
   const [navPopover, setNavPopover] = useState(null);
-  const [layoutVersion, setLayoutVersion] = useState(readLayoutVersion);
+  const [filtersExpanded, setFiltersExpanded] = useState(true);
+  const [filtersSearch, setFiltersSearch] = useState("");
+  const [customizeOpen, setCustomizeOpen] = useState(false);
+  const customizeBtnRef = useRef(null);
   const sidebarContainerRef = useRef(null);
   const navPopoverRef = useRef(null);
   const popoverHideTimer = useRef(null);
 
   useEffect(() => {
-    localStorage.setItem(RECENT_STORAGE_KEY, JSON.stringify(recentItems));
-  }, [recentItems]);
+    try {
+      localStorage.setItem(`merchant-hub-recent-${uiVersion}`, JSON.stringify(recentItems));
+    } catch {
+      /* ignore */
+    }
+  }, [recentItems, uiVersion]);
 
   useEffect(() => {
     try {
@@ -448,18 +781,29 @@ export default function App() {
     }
   }, [sidebarCollapsed]);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(LAYOUT_VERSION_KEY, String(layoutVersion));
-    } catch {
-      /* ignore */
-    }
-  }, [layoutVersion]);
-
   const hideNavPopover = useCallback(() => {
     if (popoverHideTimer.current) clearTimeout(popoverHideTimer.current);
     setNavPopover(null);
   }, []);
+
+  const applyUiVersion = useCallback(
+    (next) => {
+      if (next === uiVersion) return;
+      setUiVersion(next);
+      try {
+        localStorage.setItem(VERSION_STORAGE_KEY, next);
+      } catch {
+        /* ignore */
+      }
+      setRecentItems(loadRecentForVersion(next));
+      const sections = next === "v2" ? NAV_SECTIONS_V2 : NAV_SECTIONS_V1;
+      setActiveId((id) => (id && isValidNavId(sections, id) ? id : null));
+      setExpanded(new Set());
+      setQuery("");
+      hideNavPopover();
+    },
+    [uiVersion, hideNavPopover]
+  );
 
   const scheduleHideNavPopover = useCallback(() => {
     if (popoverHideTimer.current) clearTimeout(popoverHideTimer.current);
@@ -546,10 +890,10 @@ export default function App() {
       addToRecent(id, label);
       setActiveId(id);
       setQuery("");
-      const pid = findParentGroupId(NAV_SECTIONS, id);
+      const pid = findParentGroupId(navSections, id);
       if (pid) setExpanded((prev) => new Set([...prev, pid]));
     },
-    [addToRecent]
+    [addToRecent, navSections]
   );
 
   const toggleGroup = useCallback((groupId) => {
@@ -572,7 +916,7 @@ export default function App() {
     hideNavPopover();
   }, [hideNavPopover]);
 
-  const meta = activeId ? getMetaForId(NAV_SECTIONS, activeId) : null;
+  const meta = activeId ? getMetaForId(navSections, activeId) : null;
 
   return (
     <div style={{ display: "flex", flex: 1, minHeight: 0, alignItems: "stretch" }}>
@@ -688,7 +1032,7 @@ export default function App() {
                     <span className="section-label-text">Categories</span>
                   </div>
                   <div>
-                    {NAV_SECTIONS.map((section) => {
+                    {navSections.map((section) => {
                       if (section.type === "item") {
                         return (
                           <div key={section.id} className="category-group">
@@ -809,11 +1153,7 @@ export default function App() {
           aria-expanded={!sidebarCollapsed}
           onClick={toggleSidebarCollapsed}
         >
-          <SideIcon
-            icon={sidebarCollapsed ? SidebarExpandGlyph : SidebarCollapseGlyph}
-            size={24}
-            className="collapse-btn-icon"
-          />
+          <SideIcon icon={SidebarCollapseGlyph} size={24} className="collapse-btn-icon" />
         </button>
       </div>
 
@@ -877,40 +1217,131 @@ export default function App() {
           </div>
         ) : (
           <div className="main-view visible" id="main-view">
-            <MainViewChrome version={layoutVersion} meta={meta} />
+            <header className="page-header page-header--main">
+              <div className="page-header-primary">
+                <h1 className="page-title">Orders</h1>
+                <a className="page-doc-link page-doc-link--sm" href="#">
+                  <span className="page-doc-link__text">How orders works</span>
+                  <SideIcon icon={ExternalLinkGlyph} className="page-doc-link__icon" />
+                </a>
+                {meta?.parentLabel && (
+                  <span className="page-breadcrumb">
+                    {meta.parentLabel} / {meta.label}
+                  </span>
+                )}
+              </div>
+              <button type="button" className="page-primary-btn page-primary-btn--active">
+                <SideIcon icon={PlusGlyph} />
+                <span>Create</span>
+              </button>
+            </header>
 
-            <div className="sk-cards-row">
-              {[0, 1, 2, 3].map((i) => (
-                <div key={i} className="sk-card">
-                  <div className="sk sk-card-label" />
-                  <div className="sk sk-card-value" />
-                  <div className="sk sk-card-sub" />
+            <div className="filters-section">
+              <div className="filters-toolbar" role="toolbar" aria-label="Filters toolbar">
+                <button
+                  type="button"
+                  className={`filters-toolbar-btn filters-toolbar-btn--filter${filtersExpanded ? " is-active" : ""}`}
+                  aria-expanded={filtersExpanded}
+                  aria-controls="filters-panel-body"
+                  onClick={() => setFiltersExpanded((v) => !v)}
+                >
+                  <SideIcon icon={FiltersGlyph} className="filters-toolbar-btn__icon" />
+                  <span className="filters-toolbar-btn__label">Filter</span>
+                  <span className="filters-toolbar-btn__badge">2</span>
+                </button>
+
+                <div className="filters-toolbar-search">
+                  <div className="unit-textfield unit-textfield--sm">
+                    <div className="unit-textfield__outline">
+                      <div className="unit-textfield__field">
+                        <SideIcon icon={SearchGlyph} />
+                        <input
+                          type="search"
+                          placeholder="Search"
+                          autoComplete="off"
+                          spellCheck={false}
+                          value={filtersSearch}
+                          onChange={(e) => setFiltersSearch(e.target.value)}
+                          aria-label="Search"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              ))}
-            </div>
 
-            <div className="sk-chart-wrap">
-              <div className="sk-chart-header">
-                <div className="sk sk-chart-title" />
-                <div className="sk sk-chart-legend" />
+                <div className="filters-toolbar-actions">
+                  <button type="button" className="filters-toolbar-btn">
+                    <SideIcon icon={SortGlyph} className="filters-toolbar-btn__icon" />
+                    <span className="filters-toolbar-btn__label">Sort</span>
+                  </button>
+                  <button type="button" className="filters-toolbar-btn">
+                    <SideIcon icon={SettingsViewGlyph} className="filters-toolbar-btn__icon" />
+                    <span className="filters-toolbar-btn__label">View</span>
+                  </button>
+                </div>
               </div>
-              <div className="sk-chart-bars">
-                {CHART_BAR_HEIGHTS.map((h, i) => (
-                  <div key={i} className="sk sk-bar" style={{ height: `${h}%` }} />
-                ))}
+
+            {filtersExpanded && (
+              <div
+                className="filters-panel"
+                id="filters-panel-body"
+                role="region"
+                aria-label="Filters"
+              >
+                <div className="filters-panel-fields">
+                  {FILTER_FIELDS.map((f) => (
+                    <div key={f.id} className="filters-field">
+                      <p className="filters-field-label">{f.label}</p>
+                      <div className="unit-textfield unit-textfield--sm">
+                        <div className="unit-textfield__outline">
+                          <div
+                            className={
+                              f.kind === "amount"
+                                ? "unit-textfield__field unit-textfield__field--split"
+                                : "unit-textfield__field"
+                            }
+                          >
+                            {renderFilterInput(f)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="filters-panel-footer">
+                  <button
+                    ref={customizeBtnRef}
+                    type="button"
+                    className="filters-customize-link"
+                    onClick={() => setCustomizeOpen((v) => !v)}
+                  >
+                    <SideIcon icon={SettingsCustomizeGlyph} />
+                    <span>Customize</span>
+                  </button>
+                  <div className="filters-panel-footer-actions">
+                    <button type="button" className="filters-reset">
+                      Reset all
+                    </button>
+                    <button type="button" className="filters-apply">
+                      Apply
+                    </button>
+                  </div>
+                </div>
               </div>
+            )}
             </div>
 
             <div className="sk-table-wrap">
               <div className="sk-table-header">
                 <div className="sk sk-table-title" />
-                <div className="sk sk-table-action sk" />
+                <div className="sk sk-table-action" />
               </div>
               {SK_TABLE_ROWS.map((widths, ri) => (
                 <div
                   key={ri}
                   className="sk-table-row"
-                  style={{ gridTemplateColumns: "2fr 1.5fr 1fr 1fr 80px" }}
+                  style={{ gridTemplateColumns: "2.2fr 1.2fr 0.8fr 0.7fr 0.3fr" }}
                 >
                   {widths.map((pct, ci) => (
                     <div key={ci} className="sk sk-cell" style={{ width: `${pct}%` }} />
@@ -922,30 +1353,35 @@ export default function App() {
         )}
       </div>
 
+      {customizeOpen && (
+        <CustomizeFiltersPopover
+          anchorRef={customizeBtnRef}
+          onClose={() => setCustomizeOpen(false)}
+          onSave={() => setCustomizeOpen(false)}
+        />
+      )}
+
       <div
-        className="unit-button-group unit-button-group--floating"
-        role="radiogroup"
-        aria-label="Page layout version"
+        className="prototype-version-switch prototype-version-switch--floating"
+        role="group"
+        aria-label="Prototype navigation version"
       >
         <button
           type="button"
-          role="radio"
-          aria-checked={layoutVersion === 1}
-          className={`unit-button-group__segment${layoutVersion === 1 ? " unit-button-group__segment--active" : ""}`}
-          onClick={() => setLayoutVersion(1)}
+          className={`prototype-version-btn${uiVersion === "v1" ? " is-active" : ""}`}
+          aria-pressed={uiVersion === "v1"}
+          onClick={() => applyUiVersion("v1")}
         >
           v1
         </button>
         <button
           type="button"
-          role="radio"
-          aria-checked={layoutVersion === 2}
-          className={`unit-button-group__segment${layoutVersion === 2 ? " unit-button-group__segment--active" : ""}`}
-          onClick={() => setLayoutVersion(2)}
+          className={`prototype-version-btn${uiVersion === "v2" ? " is-active" : ""}`}
+          aria-pressed={uiVersion === "v2"}
+          onClick={() => applyUiVersion("v2")}
         >
           v2
         </button>
-        <span className="unit-button-group__bg" aria-hidden />
       </div>
     </div>
   );
