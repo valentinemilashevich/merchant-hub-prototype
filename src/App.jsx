@@ -63,6 +63,560 @@ const FILTER_FIELDS = [
   { id: "payment-type", label: "Payment type", kind: "select" },
 ];
 
+/* ─── Customize Filters: full filter catalogue ─── */
+const ALL_FILTERS = [
+  { id: "order-id", label: "Order ID", description: "by order identifier" },
+  { id: "email", label: "Email", description: "by customer email adress" },
+  { id: "created", label: "Created", description: "Transaction creation date" },
+  { id: "updated", label: "Updated", description: "Transaction update date" },
+  { id: "channel", label: "Channel", description: "Transaction date has been updated." },
+  { id: "amount", label: "Amount", description: "Amount in USD, EUR, GBP or other" },
+  { id: "currency", label: "Currency", description: "USD, EUR, GBP and more" },
+  { id: "customer-id", label: "Customer ID", description: "By customer identifier" },
+  { id: "status", label: "Status", description: "Actual transaction status" },
+  { id: "refund", label: "Refund", description: "Refund status" },
+  { id: "cardholder-name", label: "Cardholder name", description: "First name, Second name" },
+  { id: "descriptor", label: "Descriptor", description: "Statement descriptor text" },
+  { id: "payment-type", label: "Payment type", description: "Card, APM, or other method" },
+  { id: "card-brand", label: "Card brand", description: "Visa, Mastercard, Amex and more" },
+  { id: "card-number", label: "Card number", description: "Last 4 digits or full number" },
+  { id: "country", label: "Country", description: "Customer or card country" },
+  { id: "3ds-status", label: "3DS status", description: "3D Secure verification result" },
+  { id: "error-code", label: "Error code", description: "Decline or error reason code" },
+];
+
+const DEFAULT_ADDED_IDS = ["order-id", "email", "created", "updated"];
+
+const DEFAULT_PRESETS = [
+  {
+    id: "finances",
+    label: "Finances",
+    filters: ["order-id", "amount", "currency", "status", "created", "updated"],
+  },
+  {
+    id: "data-analytics",
+    label: "Data analytics",
+    filters: ["order-id", "channel", "status", "country", "card-brand", "created"],
+  },
+  {
+    id: "customer-support",
+    label: "Customer support",
+    filters: ["order-id", "email", "customer-id", "status", "cardholder-name"],
+  },
+  {
+    id: "management",
+    label: "Management",
+    filters: ["order-id", "amount", "currency", "status", "channel"],
+  },
+  {
+    id: "development",
+    label: "Developement",
+    filters: ["order-id", "error-code", "3ds-status", "status", "channel"],
+  },
+];
+
+/* ─── Drag handle icon (6-dot grip) ─── */
+function DragHandleIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+      <circle cx="6" cy="4" r="1" fill="#8F8F8F" />
+      <circle cx="10" cy="4" r="1" fill="#8F8F8F" />
+      <circle cx="6" cy="8" r="1" fill="#8F8F8F" />
+      <circle cx="10" cy="8" r="1" fill="#8F8F8F" />
+      <circle cx="6" cy="12" r="1" fill="#8F8F8F" />
+      <circle cx="10" cy="12" r="1" fill="#8F8F8F" />
+    </svg>
+  );
+}
+
+/* ─── Toggle switch (animates before firing onChange) ─── */
+const TOGGLE_ANIM_MS = 220;
+
+function ToggleSwitch({ checked, onChange }) {
+  const [animating, setAnimating] = useState(null); // "on" | "off" | null
+  const timerRef = useRef(null);
+
+  const handleClick = useCallback(() => {
+    if (timerRef.current) return;
+    const direction = checked ? "off" : "on";
+    setAnimating(direction);
+    timerRef.current = setTimeout(() => {
+      timerRef.current = null;
+      setAnimating(null);
+      onChange();
+    }, TOGGLE_ANIM_MS);
+  }, [checked, onChange]);
+
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+
+  /* While animating, show the TARGET visual state; otherwise show checked */
+  const visual = animating ? (animating === "on") : checked;
+  const animClass = animating === "on" ? " cf-toggle--anim-on" : animating === "off" ? " cf-toggle--anim-off" : "";
+
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={visual}
+      className={`cf-toggle${visual ? " cf-toggle--on" : ""}${animClass}`}
+      onClick={handleClick}
+    >
+      <span className="cf-toggle__thumb" />
+    </button>
+  );
+}
+
+/* ─── Close (X) icon for preset deletion ─── */
+function CloseSmallIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+      <path d="M11.33 4.67L4.67 11.33M4.67 4.67l6.66 6.66" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/* ─── Arrow-down icon for "Available" header ─── */
+function ArrowDownIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+      <path d="M8 3.33v9.34M8 12.67l-3.33-3.34M8 12.67l3.33-3.34" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/* ─── Customize Filters Popover ─── */
+function CustomizeFiltersPopover({ anchorRef, onClose, onSave }) {
+  const [selectedPreset, setSelectedPreset] = useState(null);
+  const [addedIds, setAddedIds] = useState(() => [...DEFAULT_ADDED_IDS]);
+  const [personalPresets, setPersonalPresets] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [savingPreset, setSavingPreset] = useState(false);
+  const [presetName, setPresetName] = useState("");
+  const [availableSort, setAvailableSort] = useState("asc"); // "asc" | "desc"
+  const [dragOverId, setDragOverId] = useState(null);
+  const dragItemId = useRef(null);
+  const popoverRef = useRef(null);
+  const presetInputRef = useRef(null);
+  const [positioned, setPositioned] = useState(false);
+
+  /* Position popover anchored to the Customize button — runs after first paint */
+  useLayoutEffect(() => {
+    const anchor = anchorRef?.current;
+    const pop = popoverRef.current;
+    if (!anchor || !pop) return;
+
+    const reposition = () => {
+      const ar = anchor.getBoundingClientRect();
+      const pw = pop.offsetWidth;
+      const ph = pop.offsetHeight;
+
+      /* Try to place bottom-left of popover at top-left of button */
+      let top = ar.top - ph - 8;
+      let left = ar.left;
+
+      /* If it overflows the top of the viewport, place below */
+      if (top < 8) top = ar.bottom + 8;
+
+      /* Clamp horizontal */
+      if (left + pw > window.innerWidth - 8) left = window.innerWidth - pw - 8;
+      if (left < 8) left = 8;
+
+      /* Clamp vertical to viewport */
+      if (top + ph > window.innerHeight - 8) top = window.innerHeight - ph - 8;
+      if (top < 8) top = 8;
+
+      pop.style.top = top + "px";
+      pop.style.left = left + "px";
+      setPositioned(true);
+    };
+
+    /* Use rAF to ensure layout is computed */
+    const id = requestAnimationFrame(reposition);
+    return () => cancelAnimationFrame(id);
+  }, [anchorRef]);
+
+  /* Click outside → close */
+  useEffect(() => {
+    const handler = (e) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target)) {
+        onClose();
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [onClose]);
+
+  /* Escape key → close */
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  /* Select a preset → load its filters */
+  const handleSelectPreset = useCallback((preset) => {
+    setSelectedPreset(preset.id);
+    setAddedIds([...preset.filters]);
+  }, []);
+
+  /* Toggle a filter on/off */
+  const toggleFilter = useCallback((filterId) => {
+    setAddedIds((prev) =>
+      prev.includes(filterId)
+        ? prev.filter((id) => id !== filterId)
+        : [...prev, filterId]
+    );
+    setSelectedPreset(null);
+  }, []);
+
+  /* Clear all added */
+  const clearAll = useCallback(() => {
+    setAddedIds([]);
+    setSelectedPreset(null);
+  }, []);
+
+  /* Select all available */
+  const selectAll = useCallback(() => {
+    setAddedIds(ALL_FILTERS.map((f) => f.id));
+    setSelectedPreset(null);
+  }, []);
+
+  /* Delete personal preset */
+  const deletePersonalPreset = useCallback((presetId) => {
+    setPersonalPresets((prev) => prev.filter((p) => p.id !== presetId));
+    setSelectedPreset((cur) => (cur === presetId ? null : cur));
+  }, []);
+
+  /* Save as preset */
+  const handleSavePreset = useCallback(() => {
+    if (!savingPreset) {
+      setSavingPreset(true);
+      setTimeout(() => presetInputRef.current?.focus(), 0);
+      return;
+    }
+    const name = presetName.trim();
+    if (!name) return;
+    const newPreset = {
+      id: `personal-${Date.now()}`,
+      label: name,
+      filters: [...addedIds],
+    };
+    setPersonalPresets((prev) => [...prev, newPreset]);
+    setSelectedPreset(newPreset.id);
+    setSavingPreset(false);
+    setPresetName("");
+  }, [savingPreset, presetName, addedIds]);
+
+  const handlePresetKeyDown = useCallback(
+    (e) => {
+      if (e.key === "Enter") handleSavePreset();
+      if (e.key === "Escape") {
+        setSavingPreset(false);
+        setPresetName("");
+      }
+    },
+    [handleSavePreset]
+  );
+
+  /* Cancel */
+  const handleCancel = useCallback(() => {
+    if (savingPreset) {
+      setSavingPreset(false);
+      setPresetName("");
+      return;
+    }
+    onClose();
+  }, [savingPreset, onClose]);
+
+  /* ── Drag and drop for Added filters ── */
+  const handleDragStart = useCallback((e, filterId) => {
+    dragItemId.current = filterId;
+    e.dataTransfer.effectAllowed = "move";
+    e.currentTarget.classList.add("cf-filter-row--dragging");
+  }, []);
+
+  const handleDragEnd = useCallback((e) => {
+    dragItemId.current = null;
+    setDragOverId(null);
+    e.currentTarget.classList.remove("cf-filter-row--dragging");
+  }, []);
+
+  const handleDragOver = useCallback((e, filterId) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverId(filterId);
+  }, []);
+
+  const handleDrop = useCallback((e, targetId) => {
+    e.preventDefault();
+    const srcId = dragItemId.current;
+    if (!srcId || srcId === targetId) { setDragOverId(null); return; }
+    setAddedIds((prev) => {
+      const next = [...prev];
+      const srcIdx = next.indexOf(srcId);
+      const tgtIdx = next.indexOf(targetId);
+      if (srcIdx === -1 || tgtIdx === -1) return prev;
+      next.splice(srcIdx, 1);
+      next.splice(tgtIdx, 0, srcId);
+      return next;
+    });
+    setSelectedPreset(null);
+    setDragOverId(null);
+  }, []);
+
+  /* ── Sort toggle for Available ── */
+  const toggleSort = useCallback(() => {
+    setAvailableSort((prev) => (prev === "asc" ? "desc" : "asc"));
+  }, []);
+
+  /* Search: filter by name AND description */
+  const q = searchQuery.trim().toLowerCase();
+
+  /* Added filters preserve addedIds order */
+  const addedFilters = addedIds
+    .map((id) => ALL_FILTERS.find((f) => f.id === id))
+    .filter(Boolean);
+  const availableFilters = ALL_FILTERS.filter((f) => !addedIds.includes(f.id));
+
+  const filteredAdded = q
+    ? addedFilters.filter(
+        (f) =>
+          f.label.toLowerCase().includes(q) ||
+          f.description.toLowerCase().includes(q)
+      )
+    : addedFilters;
+
+  const filteredAvailableUnsorted = q
+    ? availableFilters.filter(
+        (f) =>
+          f.label.toLowerCase().includes(q) ||
+          f.description.toLowerCase().includes(q)
+      )
+    : availableFilters;
+
+  const filteredAvailable = [...filteredAvailableUnsorted].sort((a, b) => {
+    const cmp = a.label.localeCompare(b.label);
+    return availableSort === "asc" ? cmp : -cmp;
+  });
+
+  return (
+    <div className={`cf-popover${positioned ? " cf-popover--visible" : ""}`} ref={popoverRef}>
+      {/* ── Content area ── */}
+      <div className="cf-body">
+        {/* ── Left: Presets ── */}
+        <div className="cf-presets">
+          <div className="cf-presets-inner">
+            {/* Default presets */}
+            <div className="cf-preset-group">
+              <div className="cf-preset-heading">
+                <span className="cf-preset-heading__text">Presets</span>
+              </div>
+              <div className="cf-preset-list">
+                {DEFAULT_PRESETS.map((p) => (
+                  <div
+                    key={p.id}
+                    className={`cf-preset-item${selectedPreset === p.id ? " cf-preset-item--active" : ""}`}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleSelectPreset(p)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleSelectPreset(p);
+                      }
+                    }}
+                  >
+                    <span className="cf-preset-item__label">{p.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Personal presets */}
+            {(personalPresets.length > 0 || savingPreset) && (
+              <div className="cf-preset-group">
+                <div className="cf-preset-heading">
+                  <span className="cf-preset-heading__text">Personal</span>
+                </div>
+                <div className="cf-preset-list">
+                  {personalPresets.map((p) => (
+                    <div
+                      key={p.id}
+                      className={`cf-preset-item cf-preset-item--personal${selectedPreset === p.id ? " cf-preset-item--active" : ""}`}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => handleSelectPreset(p)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          handleSelectPreset(p);
+                        }
+                      }}
+                    >
+                      <span className="cf-preset-item__label">{p.label}</span>
+                      <button
+                        type="button"
+                        className="cf-preset-item__delete"
+                        aria-label={`Delete ${p.label}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deletePersonalPreset(p.id);
+                        }}
+                      >
+                        <CloseSmallIcon />
+                      </button>
+                    </div>
+                  ))}
+                  {savingPreset && (
+                    <div className="cf-preset-item cf-preset-item--editing">
+                      <input
+                        ref={presetInputRef}
+                        className="cf-preset-item__input"
+                        type="text"
+                        placeholder="Preset name"
+                        value={presetName}
+                        onChange={(e) => setPresetName(e.target.value)}
+                        onKeyDown={handlePresetKeyDown}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Right: Filters ── */}
+        <div className="cf-filters">
+          {/* Search */}
+          <div className="cf-filters-search-group">
+            <div className="cf-filters-heading">
+              <span className="cf-filters-heading__text">Filters</span>
+            </div>
+            <div className="cf-filters-search">
+              <div className="cf-filters-search__icon">
+                <SideIcon icon={SearchGlyph} />
+              </div>
+              <input
+                className="cf-filters-search__input"
+                type="text"
+                placeholder="Search filter"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </div>
+          </div>
+
+          <div className="cf-filters-scroll">
+            {/* Added section */}
+            {filteredAdded.length > 0 && (
+              <div className="cf-filter-section">
+                <div className="cf-filter-section__header">
+                  <span className="cf-filter-section__title">Added</span>
+                  <button
+                    type="button"
+                    className="cf-filter-section__action"
+                    onClick={clearAll}
+                  >
+                    Clear all
+                  </button>
+                </div>
+                <div className="cf-filter-list">
+                  {filteredAdded.map((f) => (
+                    <div
+                      key={f.id}
+                      className={`cf-filter-row${dragOverId === f.id ? " cf-filter-row--drag-over" : ""}`}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, f.id)}
+                      onDragEnd={handleDragEnd}
+                      onDragOver={(e) => handleDragOver(e, f.id)}
+                      onDrop={(e) => handleDrop(e, f.id)}
+                    >
+                      <div className="cf-filter-row__drag">
+                        <DragHandleIcon />
+                      </div>
+                      <div className="cf-filter-row__info">
+                        <span className="cf-filter-row__label">{f.label}</span>
+                        <span className="cf-filter-row__desc">{f.description}</span>
+                      </div>
+                      <ToggleSwitch
+                        checked={true}
+                        onChange={() => toggleFilter(f.id)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Available section */}
+            {filteredAvailable.length > 0 && (
+              <div className="cf-filter-section">
+                <div className="cf-filter-section__header">
+                  <div className="cf-filter-section__title-with-icon">
+                    <span className="cf-filter-section__title">Available</span>
+                    <button
+                      type="button"
+                      className={`cf-filter-section__sort-btn${availableSort === "desc" ? " cf-filter-section__sort-btn--desc" : ""}`}
+                      onClick={toggleSort}
+                      aria-label={availableSort === "asc" ? "Sort Z to A" : "Sort A to Z"}
+                    >
+                      <ArrowDownIcon />
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    className="cf-filter-section__action"
+                    onClick={selectAll}
+                  >
+                    Select all
+                  </button>
+                </div>
+                <div className="cf-filter-list">
+                  {filteredAvailable.map((f) => (
+                    <div key={f.id} className="cf-filter-row cf-filter-row--available">
+                      <div className="cf-filter-row__drag cf-filter-row__drag--empty" />
+                      <div className="cf-filter-row__info">
+                        <span className="cf-filter-row__label">{f.label}</span>
+                        <span className="cf-filter-row__desc">{f.description}</span>
+                      </div>
+                      <ToggleSwitch
+                        checked={false}
+                        onChange={() => toggleFilter(f.id)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* No results */}
+            {filteredAdded.length === 0 && filteredAvailable.length === 0 && q && (
+              <div className="cf-no-results">No filters found</div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Footer ── */}
+      <div className="cf-footer">
+        <div className="cf-footer__actions">
+          <button type="button" className="cf-footer__btn cf-footer__btn--cancel" onClick={handleCancel}>
+            Cancel
+          </button>
+          <button type="button" className="cf-footer__btn cf-footer__btn--save" onClick={handleSavePreset}>
+            Save as preset
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Skeleton table row widths (Figma node 374:10465).
  * Each sub-array holds percentage widths for 5 columns.
@@ -205,6 +759,8 @@ export default function App() {
   const [navPopover, setNavPopover] = useState(null);
   const [filtersExpanded, setFiltersExpanded] = useState(true);
   const [filtersSearch, setFiltersSearch] = useState("");
+  const [customizeOpen, setCustomizeOpen] = useState(false);
+  const customizeBtnRef = useRef(null);
   const sidebarContainerRef = useRef(null);
   const navPopoverRef = useRef(null);
   const popoverHideTimer = useRef(null);
@@ -754,7 +1310,12 @@ export default function App() {
                 </div>
 
                 <div className="filters-panel-footer">
-                  <button type="button" className="filters-customize-link">
+                  <button
+                    ref={customizeBtnRef}
+                    type="button"
+                    className="filters-customize-link"
+                    onClick={() => setCustomizeOpen((v) => !v)}
+                  >
                     <SideIcon icon={SettingsCustomizeGlyph} />
                     <span>Customize</span>
                   </button>
@@ -791,6 +1352,14 @@ export default function App() {
           </div>
         )}
       </div>
+
+      {customizeOpen && (
+        <CustomizeFiltersPopover
+          anchorRef={customizeBtnRef}
+          onClose={() => setCustomizeOpen(false)}
+          onSave={() => setCustomizeOpen(false)}
+        />
+      )}
 
       <div
         className="prototype-version-switch prototype-version-switch--floating"

@@ -1455,3 +1455,479 @@ html,
   height: 12px;
 }
 
+/* ═════════════════════════════════════════════
+   Customize Filters Popover
+   Figma: Filters → node 397:58427
+   ═════════════════════════════════════════════ */
+
+/* Popover shell — anchored to Customize button via fixed positioning */
+.cf-popover {
+  position: fixed;
+  z-index: 600;
+  background: var(--color-soft-100);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: var(--radius-lg);
+  box-shadow: 0px 6px 8px -6px rgba(0, 0, 0, 0.12), 0px 8px 16px -6px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  width: 624px;
+  max-height: 520px;
+  /* Hidden until JS positions it */
+  opacity: 0;
+  pointer-events: none;
+}
+.cf-popover--visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Body: left presets + right filters */
+.cf-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+/* ── Left panel: Presets ── */
+.cf-presets {
+  width: 220px;
+  flex-shrink: 0;
+  background: var(--color-soft-100);
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: var(--space-400);
+  scrollbar-width: none;
+}
+.cf-presets::-webkit-scrollbar { display: none; }
+
+.cf-presets-inner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-200);
+}
+
+.cf-preset-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-200);
+}
+
+.cf-preset-heading {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 24px;
+  padding: 0 var(--space-200);
+}
+
+.cf-preset-heading__text {
+  font: var(--font-caption-normal);
+  font-weight: 500;
+  color: var(--color-dense-300);
+  letter-spacing: 0.12px;
+  white-space: nowrap;
+  font-feature-settings: var(--font-feature);
+}
+
+.cf-preset-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cf-preset-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-100);
+  padding: var(--space-100) var(--space-200);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  user-select: none;
+  overflow: hidden;
+}
+.cf-preset-item:hover {
+  background: var(--color-dense-900-opacity-200);
+}
+.cf-preset-item--active {
+  background: var(--color-soft-400);
+}
+.cf-preset-item--active:hover {
+  background: var(--color-soft-400);
+}
+
+.cf-preset-item__label {
+  flex: 1;
+  min-width: 0;
+  font: var(--font-label-medium);
+  color: var(--color-dense-900);
+  font-feature-settings: var(--font-feature);
+}
+
+.cf-preset-item__delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  padding: var(--space-100);
+  color: var(--color-dense-300);
+  opacity: 0;
+  transition: opacity 100ms ease;
+}
+.cf-preset-item:hover .cf-preset-item__delete,
+.cf-preset-item--active .cf-preset-item__delete {
+  opacity: 1;
+}
+.cf-preset-item__delete:hover {
+  color: var(--color-dense-900);
+}
+
+/* Inline rename input */
+.cf-preset-item--editing {
+  padding: var(--space-100) var(--space-200);
+  background: var(--color-soft-400);
+}
+
+.cf-preset-item__input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: none;
+  font: var(--font-label-medium);
+  color: var(--color-dense-900);
+  font-feature-settings: var(--font-feature);
+  padding: 0;
+  line-height: 24px;
+}
+.cf-preset-item__input::placeholder {
+  color: var(--color-dense-200);
+}
+
+/* ── Right panel: Filters ── */
+.cf-filters {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-300);
+  padding: var(--space-400) var(--space-600);
+  overflow: hidden;
+}
+
+.cf-filters-search-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-200);
+}
+
+.cf-filters-heading {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 24px;
+}
+
+.cf-filters-heading__text {
+  font: var(--font-caption-normal);
+  font-weight: 500;
+  color: var(--color-dense-300);
+  letter-spacing: 0.12px;
+  white-space: nowrap;
+  font-feature-settings: var(--font-feature);
+}
+
+/* Search input */
+.cf-filters-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-100);
+  padding: var(--space-100);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: var(--radius-md);
+  background: var(--color-soft-100);
+  box-shadow: 0px 2px 4px -2px rgba(0, 0, 0, 0.12);
+}
+
+.cf-filters-search__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+.cf-filters-search__icon .icon {
+  width: 16px;
+  height: 16px;
+  color: var(--color-dense-200);
+}
+
+.cf-filters-search__input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: none;
+  font: var(--font-label-medium);
+  font-weight: 400;
+  color: var(--color-dense-900);
+  font-feature-settings: var(--font-feature);
+  padding: 0 var(--space-100);
+  line-height: 24px;
+}
+.cf-filters-search__input::placeholder {
+  color: var(--color-dense-200);
+}
+
+/* Scrollable filter list area */
+.cf-filters-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-300);
+  scrollbar-width: none;
+}
+.cf-filters-scroll::-webkit-scrollbar { display: none; }
+
+/* Section: Added / Available */
+.cf-filter-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cf-filter-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 28px;
+  padding: 0;
+}
+
+.cf-filter-section__title {
+  font: var(--font-caption-normal);
+  font-weight: 500;
+  color: var(--color-dense-300);
+  letter-spacing: 0.12px;
+  font-feature-settings: var(--font-feature);
+}
+
+.cf-filter-section__title-with-icon {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cf-filter-section__sort-btn {
+  display: flex;
+  align-items: center;
+  padding: var(--space-100) 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: transform 200ms ease;
+}
+.cf-filter-section__sort-btn svg {
+  width: 16px;
+  height: 16px;
+  color: var(--color-dense-300);
+}
+.cf-filter-section__sort-btn:hover svg {
+  color: var(--color-dense-600);
+}
+.cf-filter-section__sort-btn--desc {
+  transform: rotate(180deg);
+}
+
+.cf-filter-section__action {
+  font: var(--font-caption-normal);
+  font-weight: 500;
+  color: var(--color-congress-blue-700);
+  letter-spacing: 0.12px;
+  font-feature-settings: var(--font-feature);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+.cf-filter-section__action:hover {
+  color: var(--color-congress-blue-800);
+}
+
+/* Filter row */
+.cf-filter-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cf-filter-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-200);
+  padding: var(--space-100) 0;
+  border-radius: var(--radius-sm);
+  background: var(--color-soft-100);
+}
+
+.cf-filter-row__drag {
+  display: flex;
+  align-items: flex-start;
+  padding: 4px 0;
+  flex-shrink: 0;
+  width: 16px;
+  cursor: grab;
+}
+.cf-filter-row__drag svg {
+  color: var(--color-dense-200);
+}
+.cf-filter-row__drag--empty {
+  cursor: default;
+  visibility: hidden;
+}
+
+.cf-filter-row__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cf-filter-row__label {
+  font: var(--font-label-medium);
+  color: var(--color-dense-900);
+  line-height: 24px;
+  font-feature-settings: var(--font-feature);
+}
+
+.cf-filter-row__desc {
+  font: var(--font-caption-normal);
+  color: var(--color-dense-300);
+  letter-spacing: 0.12px;
+  line-height: 16px;
+  font-feature-settings: var(--font-feature);
+}
+
+/* ── Toggle switch ── */
+.cf-toggle {
+  position: relative;
+  width: 24px;
+  height: 12px;
+  flex-shrink: 0;
+  margin-top: 6px; /* center with first line of label */
+  border: none;
+  border-radius: 6px;
+  background: var(--color-soft-600);
+  cursor: pointer;
+  padding: 0;
+  transition: background 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.cf-toggle--on {
+  background: var(--color-dense-900);
+}
+
+.cf-toggle__thumb {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-soft-100);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+.cf-toggle--on .cf-toggle__thumb {
+  left: 13px;
+}
+
+/* Only animate when explicitly toggling (class added/removed by JS) */
+.cf-toggle--anim-on .cf-toggle__thumb {
+  animation: cf-thumb-on 220ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.cf-toggle--anim-off .cf-toggle__thumb {
+  animation: cf-thumb-off 220ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes cf-thumb-on {
+  0%   { left: 1px;  transform: scaleX(1); }
+  40%  { transform: scaleX(1.15); }
+  100% { left: 13px; transform: scaleX(1); }
+}
+@keyframes cf-thumb-off {
+  0%   { left: 13px; transform: scaleX(1); }
+  40%  { transform: scaleX(1.15); }
+  100% { left: 1px;  transform: scaleX(1); }
+}
+
+/* Drag and drop states */
+.cf-filter-row--dragging {
+  opacity: 0.4;
+}
+.cf-filter-row--drag-over {
+  border-top: 2px solid var(--color-dense-900);
+  margin-top: -2px;
+}
+
+/* No results */
+.cf-no-results {
+  padding: var(--space-400) 0;
+  text-align: center;
+  font: var(--font-body-normal);
+  color: var(--color-dense-200);
+  font-feature-settings: var(--font-feature);
+}
+
+/* ── Footer ── */
+.cf-footer {
+  background: var(--color-soft-100);
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  padding: var(--space-300) var(--space-400);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.cf-footer__actions {
+  display: flex;
+  gap: var(--space-200);
+  align-items: center;
+}
+
+.cf-footer__btn {
+  padding: var(--space-100) var(--space-200);
+  border-radius: var(--radius-sm);
+  font: var(--font-label-medium);
+  font-feature-settings: var(--font-feature);
+  cursor: pointer;
+  border: none;
+  line-height: 24px;
+}
+
+.cf-footer__btn--cancel {
+  background: var(--color-soft-100);
+  color: var(--color-dense-900);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  box-shadow: 0px 2px 4px -2px rgba(0, 0, 0, 0.12);
+}
+.cf-footer__btn--cancel:hover {
+  background: var(--color-soft-300);
+}
+
+.cf-footer__btn--save {
+  background: var(--color-dense-900);
+  color: var(--color-soft-100);
+}
+.cf-footer__btn--save:hover {
+  background: var(--color-dense-700);
+}
+
