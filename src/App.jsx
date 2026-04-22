@@ -24,7 +24,6 @@ import SidebarCollapseGlyph from "./assets/icons/sidebar-collapse.svg?react";
 import TaxesGlyph from "./assets/icons/taxes.svg?react";
 
 import {
-  NAV_SECTIONS_V1,
   NAV_SECTIONS_V2,
   SKIP_RECENT_IDS,
   buildSearchIndex,
@@ -664,22 +663,12 @@ const SK_TABLE_ROWS = [
   [63, 76, 46, 65, 44],
 ];
 
-const VERSION_STORAGE_KEY = "merchant-hub-ui-version";
 const SIDEBAR_SESSION_KEY = "merchant-hub-sidebar-collapsed";
 const RECENT_MAX = 7;
 
-function readUiVersion() {
-  if (typeof localStorage === "undefined") return "v1";
+function loadRecent() {
   try {
-    return localStorage.getItem(VERSION_STORAGE_KEY) === "v2" ? "v2" : "v1";
-  } catch {
-    return "v1";
-  }
-}
-
-function loadRecentForVersion(version) {
-  try {
-    const raw = localStorage.getItem(`merchant-hub-recent-${version}`);
+    const raw = localStorage.getItem("merchant-hub-recent-v2");
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed.filter((x) => x?.id && x?.label) : [];
@@ -774,13 +763,12 @@ function readInitialActiveId() {
 }
 
 export default function App() {
-  const [uiVersion, setUiVersion] = useState(readUiVersion);
-  const navSections = uiVersion === "v2" ? NAV_SECTIONS_V2 : NAV_SECTIONS_V1;
+  const navSections = NAV_SECTIONS_V2;
   const searchIndex = useMemo(() => buildSearchIndex(navSections), [navSections]);
   const [activeId, setActiveId] = useState(readInitialActiveId);
   const [expanded, setExpanded] = useState(() => new Set());
   const [query, setQuery] = useState("");
-  const [recentItems, setRecentItems] = useState(() => loadRecentForVersion(readUiVersion()));
+  const [recentItems, setRecentItems] = useState(loadRecent);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => readSidebarCollapsed());
   const [navPopover, setNavPopover] = useState(null);
   const [filtersExpanded, setFiltersExpanded] = useState(true);
@@ -794,11 +782,11 @@ export default function App() {
 
   useEffect(() => {
     try {
-      localStorage.setItem(`merchant-hub-recent-${uiVersion}`, JSON.stringify(recentItems));
+      localStorage.setItem("merchant-hub-recent-v2", JSON.stringify(recentItems));
     } catch {
       /* ignore */
     }
-  }, [recentItems, uiVersion]);
+  }, [recentItems]);
 
   useEffect(() => {
     try {
@@ -812,25 +800,6 @@ export default function App() {
     if (popoverHideTimer.current) clearTimeout(popoverHideTimer.current);
     setNavPopover(null);
   }, []);
-
-  const applyUiVersion = useCallback(
-    (next) => {
-      if (next === uiVersion) return;
-      setUiVersion(next);
-      try {
-        localStorage.setItem(VERSION_STORAGE_KEY, next);
-      } catch {
-        /* ignore */
-      }
-      setRecentItems(loadRecentForVersion(next));
-      const sections = next === "v2" ? NAV_SECTIONS_V2 : NAV_SECTIONS_V1;
-      setActiveId((id) => (id && isValidNavId(sections, id) ? id : null));
-      setExpanded(new Set());
-      setQuery("");
-      hideNavPopover();
-    },
-    [uiVersion, hideNavPopover]
-  );
 
   const scheduleHideNavPopover = useCallback(() => {
     if (popoverHideTimer.current) clearTimeout(popoverHideTimer.current);
@@ -1389,29 +1358,6 @@ export default function App() {
           onPersonalPresetsChange={setPersonalPresets}
         />
       )}
-
-      <div
-        className="prototype-version-switch prototype-version-switch--floating"
-        role="group"
-        aria-label="Prototype navigation version"
-      >
-        <button
-          type="button"
-          className={`prototype-version-btn${uiVersion === "v1" ? " is-active" : ""}`}
-          aria-pressed={uiVersion === "v1"}
-          onClick={() => applyUiVersion("v1")}
-        >
-          v1
-        </button>
-        <button
-          type="button"
-          className={`prototype-version-btn${uiVersion === "v2" ? " is-active" : ""}`}
-          aria-pressed={uiVersion === "v2"}
-          onClick={() => applyUiVersion("v2")}
-        >
-          v2
-        </button>
-      </div>
     </div>
   );
 }
