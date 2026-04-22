@@ -651,7 +651,7 @@ body {
   display: none;
   flex-direction: column;
   gap: 0;
-  padding: var(--space-700);
+  padding: 20px var(--space-700) var(--space-700);
 }
 .main-view.visible {
   display: flex;
@@ -1007,7 +1007,7 @@ html,
   --fp-toolbar-search-max: 20rem; /* 320px — set to exact Figma width if needed */
   --fp-panel-pad: var(--space-300); /* 12px */
   --fp-panel-radius: var(--radius-lg); /* 8px */
-  --fp-grid-gap: var(--space-200); /* 8px — matches legacy filter grid */
+  --fp-grid-gap: var(--space-300); /* 12px — Figma fields 431:35207 */
   --fp-field-label-gap: var(--space-100); /* 4px — .unit-textfield--sm */
   --fp-footer-divider-gap: var(--space-300); /* 12px above divider + 12px below */
 
@@ -1135,54 +1135,133 @@ html,
   flex-shrink: 0;
 }
 
+/* Figma node 431:35207 — fields grid (4×N, gap 12, cell max 320) */
 .filters-panel-fields {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
-  column-gap: var(--fp-grid-gap);
-  row-gap: var(--fp-grid-gap);
-  align-items: end;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--fp-grid-gap);
+  flex: 1 1 auto;
+  min-height: 0;
+  align-items: start;
   min-width: 0;
+  box-sizing: border-box;
+  font-family: var(--font-family);
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (max-width: 1040px) {
+  .filters-panel-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .filters-panel-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .filters-field {
-  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: var(--fp-field-label-gap);
-  border-radius: var(--unit-radius-sm);
+  justify-self: start;
+  width: 100%;
+  max-width: 320px;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
+/* Sans Serif/Body/Medium — label above field */
 .filters-field-label {
-  font: var(--font-body-medium);
-  line-height: var(--lh-200);
+  font-weight: var(--fw-medium);
+  font-size: var(--fs-200);
+  line-height: var(--unit-lh-200);
   color: var(--color-dense-900);
   font-feature-settings: var(--font-feature);
   margin: 0;
 }
 
+.filters-field .unit-textfield {
+  gap: 0;
+}
+
 .filters-field .unit-textfield__outline {
   width: 100%;
   border-radius: var(--unit-radius-sm);
+  background: var(--unit-color-soft-100);
+  box-shadow: var(--unit-shadow-sm);
 }
 
 .filters-field .unit-textfield__field {
   border-radius: var(--unit-radius-sm);
+  border-color: var(--color-soft-600);
+  align-items: center;
 }
 
-/* Amount row: compare + value use sm (32px) height like other filter inputs */
+.filters-field .unit-textfield__field--split {
+  height: 34px;
+  min-height: 34px;
+}
+
+/* Value row: gap 8px; chevron pinned right (Figma Main Field) */
+.filters-field .unit-textfield__field:not(.unit-textfield__field--split) {
+  gap: var(--unit-space-200);
+}
+
+.filters-field .unit-textfield__field:not(.unit-textfield__field--split) > .icon:last-of-type {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.filters-field .unit-textfield__field:not(.unit-textfield__field--split) > input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 24px;
+  line-height: var(--lh-300);
+}
+
+.filters-field .unit-textfield__field .icon {
+  width: 16px;
+  height: 16px;
+  color: var(--color-dense-900);
+}
+
+/* Amount: Sans Serif/Label/Normal + dense-200 (Figma split segments) */
 .filters-field .unit-textfield__field--split .unit-textfield__split {
-  min-height: var(--tf-height-sm);
-  padding: var(--tf-padding-y-sm) var(--tf-padding-x-sm);
+  min-height: 0;
+  padding: var(--unit-space-100) var(--unit-space-200);
 }
 
 .filters-field .unit-textfield__split--main {
-  min-height: var(--tf-height-sm);
-  padding: var(--tf-padding-y-sm) var(--tf-padding-x-sm);
+  min-height: 0;
+  padding: var(--unit-space-100) var(--unit-space-200);
 }
 
 .filters-field .unit-textfield__split-label {
-  font: var(--font-body-medium);
-  line-height: var(--lh-200);
+  font: var(--font-body-normal);
+  line-height: var(--lh-300);
+  color: var(--color-dense-200);
+}
+
+.filters-field .unit-textfield__split--main input {
+  font-weight: var(--fw-normal);
+  color: var(--color-dense-200);
+}
+
+.filters-field .unit-textfield__split--main input::placeholder {
+  font-weight: var(--fw-normal);
+  color: var(--color-dense-200);
+}
+
+.filters-field .unit-textfield__split--compare {
+  flex: 1 1 0;
+  min-width: 0;
+  gap: var(--unit-space-200);
+}
+
+.filters-field .unit-textfield__split--compare .icon {
+  margin-left: auto;
 }
 
 /* Footer: single vertical rhythm (no double gap from flex + padding) */
@@ -1619,23 +1698,27 @@ html,
   flex-direction: column;
 }
 
-/* Sticky header — label + search — gradient overlaps top of scroll area */
+/* Sticky header — Figma 421:33436 export: white → transparent (bg-gradient-to-t) */
 .cf-filters-header {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-200);
   padding: var(--space-400) var(--space-400) var(--space-300);
-  /* Extend header 16px into scroll area */
-  padding-bottom: calc(var(--space-300) + 16px);
-  margin-bottom: -16px;
+  margin-bottom: 0px;
   position: relative;
   z-index: 1;
   background: linear-gradient(
     to bottom,
-    var(--color-soft-100) calc(100% - 16px),
-    transparent 100%
+    #ffffff 0%,
+    rgba(255, 255, 255, 0) 100%
   );
+}
+
+.cf-filters-header__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-200);
+  padding-inline: var(--space-200);
 }
 
 .cf-filters-heading {
@@ -1830,6 +1913,14 @@ html,
   letter-spacing: 0.12px;
   line-height: 16px;
   font-feature-settings: var(--font-feature);
+}
+
+/* Locked filters: keep column width where toggle was removed */
+.cf-filter-row__toggle-slot {
+  flex-shrink: 0;
+  width: 24px;
+  height: 12px;
+  margin-top: 6px;
 }
 
 /* ── Toggle switch ── */

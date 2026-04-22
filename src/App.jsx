@@ -55,30 +55,50 @@ function CalendarGlyph({ className }) {
   );
 }
 
-const FILTER_FIELDS = [
-  { id: "order-id", label: "Order ID", kind: "text" },
-  { id: "customer-email", label: "Customer email", kind: "text" },
-  { id: "channel", label: "Channel", kind: "select" },
-  { id: "payment-type", label: "Payment type", kind: "select" },
+/* ─── Customize Filters: full filter catalogue (kind = main panel input) ─── */
+const ALL_FILTERS = [
+  { id: "order-id", label: "Order ID", description: "by order identifier", kind: "text" },
+  { id: "email", label: "Customer email", description: "by customer email adress", kind: "text" },
+  { id: "created", label: "Created", description: "Transaction creation date", kind: "date" },
+  { id: "updated", label: "Updated", description: "Transaction update date", kind: "date" },
+  { id: "channel", label: "Channel", description: "Transaction date has been updated.", kind: "select" },
+  { id: "amount", label: "Amount", description: "Amount in USD, EUR, GBP or other", kind: "amount" },
+  { id: "currency", label: "Currency", description: "USD, EUR, GBP and more", kind: "select" },
+  { id: "customer-id", label: "Customer ID", description: "By customer identifier", kind: "text" },
+  { id: "status", label: "Status", description: "Actual transaction status", kind: "select" },
+  { id: "refund", label: "Refund", description: "Refund status", kind: "select" },
+  { id: "cardholder-name", label: "Cardholder name", description: "First name, Second name", kind: "text" },
+  { id: "descriptor", label: "Descriptor", description: "Statement descriptor text", kind: "select" },
 ];
 
-/* ─── Customize Filters: full filter catalogue ─── */
-const ALL_FILTERS = [
-  { id: "order-id", label: "Order ID", description: "by order identifier" },
-  { id: "email", label: "Email", description: "by customer email adress" },
-  { id: "created", label: "Created", description: "Transaction creation date" },
-  { id: "updated", label: "Updated", description: "Transaction update date" },
-  { id: "channel", label: "Channel", description: "Transaction date has been updated." },
-  { id: "amount", label: "Amount", description: "Amount in USD, EUR, GBP or other" },
-  { id: "currency", label: "Currency", description: "USD, EUR, GBP and more" },
-  { id: "customer-id", label: "Customer ID", description: "By customer identifier" },
-  { id: "status", label: "Status", description: "Actual transaction status" },
-  { id: "refund", label: "Refund", description: "Refund status" },
-  { id: "cardholder-name", label: "Cardholder name", description: "First name, Second name" },
-  { id: "descriptor", label: "Descriptor", description: "Statement descriptor text" },
-];
+/** Always on the panel / in “Added”; no toggle — drag only to reorder. */
+const LOCKED_FILTER_IDS = new Set(["order-id", "email"]);
 
 const DEFAULT_ADDED_IDS = ["order-id", "email", "created", "updated"];
+
+/** Dedupe, drop unknown ids, ensure locked filters exist (order preserved). */
+function normalizeActiveFilterIds(orderedIds) {
+  const known = new Set(ALL_FILTERS.map((f) => f.id));
+  const seen = new Set();
+  const out = [];
+  for (const id of orderedIds) {
+    if (!known.has(id) || seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
+  }
+  if (!seen.has("order-id")) {
+    const emailIdx = out.indexOf("email");
+    if (emailIdx === -1) out.unshift("order-id");
+    else out.splice(emailIdx, 0, "order-id");
+    seen.add("order-id");
+  }
+  if (!seen.has("email")) {
+    const orderIdx = out.indexOf("order-id");
+    out.splice(orderIdx + 1, 0, "email");
+    seen.add("email");
+  }
+  return out;
+}
 
 const DEFAULT_PRESETS = [
   {
@@ -89,7 +109,7 @@ const DEFAULT_PRESETS = [
   {
     id: "data-analytics",
     label: "Data analytics",
-    filters: ["order-id", "channel", "status", "country", "card-brand", "created"],
+    filters: ["order-id", "channel", "status", "amount", "currency", "created"],
   },
   {
     id: "customer-support",
@@ -173,9 +193,16 @@ function ArrowDownIcon() {
 }
 
 /* ─── Customize Filters Popover ─── */
-function CustomizeFiltersPopover({ anchorRef, onClose, onSave, personalPresets, onPersonalPresetsChange }) {
+function CustomizeFiltersPopover({
+  anchorRef,
+  filtersPanelRef,
+  onClose,
+  personalPresets,
+  onPersonalPresetsChange,
+  activeFilterIds,
+  onActiveFilterIdsChange,
+}) {
   const [selectedPreset, setSelectedPreset] = useState(null);
-  const [addedIds, setAddedIds] = useState(() => [...DEFAULT_ADDED_IDS]);
   const [searchQuery, setSearchQuery] = useState("");
   const [savingPreset, setSavingPreset] = useState(false);
   const [presetName, setPresetName] = useState("");
@@ -187,41 +214,70 @@ function CustomizeFiltersPopover({ anchorRef, onClose, onSave, personalPresets, 
   const presetInputRef = useRef(null);
   const [positioned, setPositioned] = useState(false);
 
-  /* Position popover anchored to the Customize button — runs after first paint */
+  /* Anchor to Customize; re-run when panel height / filter list / scroll changes */
   useLayoutEffect(() => {
-    const anchor = anchorRef?.current;
     const pop = popoverRef.current;
-    if (!anchor || !pop) return;
+    if (!pop) return;
 
     const reposition = () => {
+      const anchor = anchorRef?.current;
+      const p = popoverRef.current;
+      if (!anchor || !p) return;
       const ar = anchor.getBoundingClientRect();
-      const pw = pop.offsetWidth;
-      const ph = pop.offsetHeight;
+      const pw = p.offsetWidth;
+      const ph = p.offsetHeight;
+      const margin = 8;
 
-      /* Try to place bottom-left of popover at top-left of button */
-      let top = ar.top - ph - 8;
+      /* Prefer above the Customize button; flip below if not enough room above.
+         Do not clamp top to the viewport — that detaches the popper from the anchor
+         when the filter panel grows (e.g. Select all). */
+      let top = ar.top - ph - margin;
+      if (top < margin) top = ar.bottom + margin;
+
       let left = ar.left;
+      if (left + pw > window.innerWidth - margin) left = window.innerWidth - pw - margin;
+      if (left < margin) left = margin;
 
-      /* If it overflows the top of the viewport, place below */
-      if (top < 8) top = ar.bottom + 8;
-
-      /* Clamp horizontal */
-      if (left + pw > window.innerWidth - 8) left = window.innerWidth - pw - 8;
-      if (left < 8) left = 8;
-
-      /* Clamp vertical to viewport */
-      if (top + ph > window.innerHeight - 8) top = window.innerHeight - ph - 8;
-      if (top < 8) top = 8;
-
-      pop.style.top = top + "px";
-      pop.style.left = left + "px";
+      p.style.top = `${top}px`;
+      p.style.left = `${left}px`;
       setPositioned(true);
     };
 
-    /* Use rAF to ensure layout is computed */
-    const id = requestAnimationFrame(reposition);
-    return () => cancelAnimationFrame(id);
-  }, [anchorRef]);
+    const scheduleReposition = () => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(reposition);
+      });
+    };
+
+    scheduleReposition();
+
+    const panel = filtersPanelRef?.current;
+    const roPanel =
+      typeof ResizeObserver !== "undefined" && panel
+        ? new ResizeObserver(() => {
+            scheduleReposition();
+          })
+        : null;
+    if (panel && roPanel) roPanel.observe(panel);
+
+    const roPop =
+      typeof ResizeObserver !== "undefined" && pop
+        ? new ResizeObserver(() => {
+            scheduleReposition();
+          })
+        : null;
+    if (roPop) roPop.observe(pop);
+
+    window.addEventListener("resize", scheduleReposition);
+    window.addEventListener("scroll", reposition, true);
+
+    return () => {
+      roPanel?.disconnect();
+      roPop?.disconnect();
+      window.removeEventListener("resize", scheduleReposition);
+      window.removeEventListener("scroll", reposition, true);
+    };
+  }, [anchorRef, filtersPanelRef, activeFilterIds]);
 
   /* Click outside → close (ignore clicks on the anchor button — it handles its own toggle) */
   useEffect(() => {
@@ -244,33 +300,38 @@ function CustomizeFiltersPopover({ anchorRef, onClose, onSave, personalPresets, 
     return () => document.removeEventListener("keydown", handler);
   }, [onClose]);
 
-  /* Select a preset → load its filters */
-  const handleSelectPreset = useCallback((preset) => {
-    setSelectedPreset(preset.id);
-    setAddedIds([...preset.filters]);
-  }, []);
+  /* Select a preset → load its filters (panel + popover share state) */
+  const handleSelectPreset = useCallback(
+    (preset) => {
+      setSelectedPreset(preset.id);
+      onActiveFilterIdsChange([...preset.filters]);
+    },
+    [onActiveFilterIdsChange]
+  );
 
-  /* Toggle a filter on/off */
-  const toggleFilter = useCallback((filterId) => {
-    setAddedIds((prev) =>
-      prev.includes(filterId)
-        ? prev.filter((id) => id !== filterId)
-        : [...prev, filterId]
-    );
-    setSelectedPreset(null);
-  }, []);
+  /* Toggle a filter on/off (locked filters: drag only, no toggle) */
+  const toggleFilter = useCallback(
+    (filterId) => {
+      if (LOCKED_FILTER_IDS.has(filterId)) return;
+      onActiveFilterIdsChange((prev) =>
+        prev.includes(filterId) ? prev.filter((id) => id !== filterId) : [...prev, filterId]
+      );
+      setSelectedPreset(null);
+    },
+    [onActiveFilterIdsChange]
+  );
 
-  /* Clear all added */
+  /* Clear optional filters — Order ID + Customer email stay */
   const clearAll = useCallback(() => {
-    setAddedIds([]);
+    onActiveFilterIdsChange(["order-id", "email"]);
     setSelectedPreset(null);
-  }, []);
+  }, [onActiveFilterIdsChange]);
 
   /* Select all available */
   const selectAll = useCallback(() => {
-    setAddedIds(ALL_FILTERS.map((f) => f.id));
+    onActiveFilterIdsChange(ALL_FILTERS.map((f) => f.id));
     setSelectedPreset(null);
-  }, []);
+  }, [onActiveFilterIdsChange]);
 
   /* Delete personal preset */
   const deletePersonalPreset = useCallback((presetId) => {
@@ -290,13 +351,13 @@ function CustomizeFiltersPopover({ anchorRef, onClose, onSave, personalPresets, 
     const newPreset = {
       id: `personal-${Date.now()}`,
       label: name,
-      filters: [...addedIds],
+      filters: [...activeFilterIds],
     };
     onPersonalPresetsChange((prev) => [...prev, newPreset]);
     setSelectedPreset(newPreset.id);
     setSavingPreset(false);
     setPresetName("");
-  }, [savingPreset, presetName, addedIds, onPersonalPresetsChange]);
+  }, [savingPreset, presetName, activeFilterIds, onPersonalPresetsChange]);
 
   const handlePresetKeyDown = useCallback(
     (e) => {
@@ -362,24 +423,26 @@ function CustomizeFiltersPopover({ anchorRef, onClose, onSave, personalPresets, 
 
     setDraggingId(filterId);
     // kick off preview with current order
-    setPreviewIds((prev) => prev ?? [...addedIds]);
-  }, [addedIds]);
+    setPreviewIds((prev) => prev ?? [...activeFilterIds]);
+  }, [activeFilterIds]);
 
   const handleDragEnd = useCallback(() => {
-    // commit preview to real order (handles both drop and cancel)
-    setAddedIds((prev) => previewIds ?? prev);
+    onActiveFilterIdsChange((prev) => previewIds ?? prev);
     dragItemId.current = null;
     setDraggingId(null);
     setPreviewIds(null);
-  }, [previewIds]);
+  }, [previewIds, onActiveFilterIdsChange]);
 
-  const handleDragOver = useCallback((e, filterId) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    const srcId = dragItemId.current;
-    if (!srcId || srcId === filterId) return;
-    setPreviewIds((prev) => computePreview(prev ?? addedIds, srcId, filterId));
-  }, [addedIds, computePreview]);
+  const handleDragOver = useCallback(
+    (e, filterId) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      const srcId = dragItemId.current;
+      if (!srcId || srcId === filterId) return;
+      setPreviewIds((prev) => computePreview(prev ?? activeFilterIds, srcId, filterId));
+    },
+    [activeFilterIds, computePreview]
+  );
 
   const handleDrop = useCallback((e, targetId) => {
     e.preventDefault();
@@ -397,13 +460,13 @@ function CustomizeFiltersPopover({ anchorRef, onClose, onSave, personalPresets, 
   const q = searchQuery.trim().toLowerCase();
 
   /* During drag show preview order; otherwise committed order */
-  const displayIds = previewIds ?? addedIds;
+  const displayIds = previewIds ?? activeFilterIds;
 
   /* Added filters preserve displayIds order */
   const addedFilters = displayIds
     .map((id) => ALL_FILTERS.find((f) => f.id === id))
     .filter(Boolean);
-  const availableFilters = ALL_FILTERS.filter((f) => !addedIds.includes(f.id));
+  const availableFilters = ALL_FILTERS.filter((f) => !activeFilterIds.includes(f.id));
 
   const filteredAdded = q
     ? addedFilters.filter(
@@ -517,22 +580,24 @@ function CustomizeFiltersPopover({ anchorRef, onClose, onSave, personalPresets, 
         <div className="cf-filters">
           {/* Sticky header with gradient fade */}
           <div className="cf-filters-header">
-            <div className="cf-filters-heading">
-              <span className="cf-filters-heading__text">Filters</span>
-            </div>
-            <div className="cf-filters-search">
-              <div className="cf-filters-search__icon">
-                <SideIcon icon={SearchGlyph} />
+            <div className="cf-filters-header__content">
+              <div className="cf-filters-heading">
+                <span className="cf-filters-heading__text">Filters</span>
               </div>
-              <input
-                className="cf-filters-search__input"
-                type="text"
-                placeholder="Search filter"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                autoComplete="off"
-                spellCheck={false}
-              />
+              <div className="cf-filters-search">
+                <div className="cf-filters-search__icon">
+                  <SideIcon icon={SearchGlyph} />
+                </div>
+                <input
+                  className="cf-filters-search__input"
+                  type="text"
+                  placeholder="Search filter"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+              </div>
             </div>
           </div>
 
@@ -568,10 +633,11 @@ function CustomizeFiltersPopover({ anchorRef, onClose, onSave, personalPresets, 
                         <span className="cf-filter-row__label">{f.label}</span>
                         <span className="cf-filter-row__desc">{f.description}</span>
                       </div>
-                      <ToggleSwitch
-                        checked={true}
-                        onChange={() => toggleFilter(f.id)}
-                      />
+                      {LOCKED_FILTER_IDS.has(f.id) ? (
+                        <div className="cf-filter-row__toggle-slot" aria-hidden />
+                      ) : (
+                        <ToggleSwitch checked={true} onChange={() => toggleFilter(f.id)} />
+                      )}
                     </div>
                   ))}
                 </div>
@@ -715,14 +781,19 @@ function renderFilterInput(field) {
     case "date":
       return (
         <>
-          <input type="text" readOnly placeholder="DD / MM / YYYY" />
           <CalendarGlyph className="icon" />
+          <input
+            type="text"
+            readOnly
+            placeholder="DD / MM / YYYY"
+            aria-label={field.label}
+          />
         </>
       );
     case "select":
       return (
         <>
-          <input type="text" readOnly placeholder="Select" />
+          <input type="text" readOnly placeholder="" aria-label={field.label} />
           <SideIcon icon={ChevronDownGlyph} />
         </>
       );
@@ -734,12 +805,12 @@ function renderFilterInput(field) {
             <SideIcon icon={ChevronDownGlyph} />
           </div>
           <div className="unit-textfield__split unit-textfield__split--main">
-            <input type="text" readOnly placeholder="Amount" />
+            <input type="text" readOnly placeholder="Amount" aria-label="Amount" />
           </div>
         </>
       );
     default:
-      return <input type="text" readOnly />;
+      return <input type="text" readOnly placeholder="" aria-label={field.label} />;
   }
 }
 
@@ -775,7 +846,21 @@ export default function App() {
   const [filtersSearch, setFiltersSearch] = useState("");
   const [customizeOpen, setCustomizeOpen] = useState(false);
   const [personalPresets, setPersonalPresets] = useState([]);
+  const [activePanelFilterIds, setActivePanelFilterIds] = useState(() =>
+    normalizeActiveFilterIds([...DEFAULT_ADDED_IDS])
+  );
+  const setPanelFilterIds = useCallback((value) => {
+    setActivePanelFilterIds((prev) => {
+      const next = typeof value === "function" ? value(prev) : value;
+      return normalizeActiveFilterIds(next);
+    });
+  }, []);
+
+  /** Toolbar badge = filters with applied values only. Not tracked in this prototype yet. */
+  const filterToolbarBadgeCount = 0;
+
   const customizeBtnRef = useRef(null);
+  const filtersPanelBodyRef = useRef(null);
   const sidebarContainerRef = useRef(null);
   const navPopoverRef = useRef(null);
   const popoverHideTimer = useRef(null);
@@ -1239,11 +1324,16 @@ export default function App() {
                   className={`filters-toolbar-btn filters-toolbar-btn--filter${filtersExpanded ? " is-active" : ""}`}
                   aria-expanded={filtersExpanded}
                   aria-controls="filters-panel-body"
-                  onClick={() => setFiltersExpanded((v) => !v)}
+                  onClick={() => {
+                    if (filtersExpanded) setCustomizeOpen(false);
+                    setFiltersExpanded((v) => !v);
+                  }}
                 >
                   <SideIcon icon={FiltersGlyph} className="filters-toolbar-btn__icon" />
                   <span className="filters-toolbar-btn__label">Filter</span>
-                  <span className="filters-toolbar-btn__badge">2</span>
+                  {filterToolbarBadgeCount > 0 ? (
+                    <span className="filters-toolbar-btn__badge">{filterToolbarBadgeCount}</span>
+                  ) : null}
                 </button>
 
                 <div className="filters-toolbar-search">
@@ -1279,30 +1369,34 @@ export default function App() {
 
             {filtersExpanded && (
               <div
+                ref={filtersPanelBodyRef}
                 className="filters-panel"
                 id="filters-panel-body"
                 role="region"
                 aria-label="Filters"
               >
                 <div className="filters-panel-fields">
-                  {FILTER_FIELDS.map((f) => (
-                    <div key={f.id} className="filters-field">
-                      <p className="filters-field-label">{f.label}</p>
-                      <div className="unit-textfield unit-textfield--sm">
-                        <div className="unit-textfield__outline">
-                          <div
-                            className={
-                              f.kind === "amount"
-                                ? "unit-textfield__field unit-textfield__field--split"
-                                : "unit-textfield__field"
-                            }
-                          >
-                            {renderFilterInput(f)}
+                  {activePanelFilterIds
+                    .map((id) => ALL_FILTERS.find((f) => f.id === id))
+                    .filter(Boolean)
+                    .map((f) => (
+                      <div key={f.id} className="filters-field">
+                        <p className="filters-field-label">{f.label}</p>
+                        <div className="unit-textfield unit-textfield--sm">
+                          <div className="unit-textfield__outline">
+                            <div
+                              className={
+                                f.kind === "amount"
+                                  ? "unit-textfield__field unit-textfield__field--split"
+                                  : "unit-textfield__field"
+                              }
+                            >
+                              {renderFilterInput(f)}
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
 
                 <div className="filters-panel-footer">
@@ -1316,7 +1410,11 @@ export default function App() {
                     <span>Customize</span>
                   </button>
                   <div className="filters-panel-footer-actions">
-                    <button type="button" className="filters-reset">
+                    <button
+                      type="button"
+                      className="filters-reset"
+                      onClick={() => setPanelFilterIds(["order-id", "email"])}
+                    >
                       Reset all
                     </button>
                     <button type="button" className="filters-apply">
@@ -1352,10 +1450,12 @@ export default function App() {
       {customizeOpen && (
         <CustomizeFiltersPopover
           anchorRef={customizeBtnRef}
+          filtersPanelRef={filtersPanelBodyRef}
           onClose={() => setCustomizeOpen(false)}
-          onSave={() => setCustomizeOpen(false)}
           personalPresets={personalPresets}
           onPersonalPresetsChange={setPersonalPresets}
+          activeFilterIds={activePanelFilterIds}
+          onActiveFilterIdsChange={setPanelFilterIds}
         />
       )}
     </div>
