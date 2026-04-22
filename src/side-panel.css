@@ -1716,14 +1716,15 @@ html,
 .cf-filter-section {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-100);
 }
 
 .cf-filter-section__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-200) var(--space-200) 4px;
+  padding: 0;
+  height: 16px;
 }
 
 .cf-filter-section__title {
