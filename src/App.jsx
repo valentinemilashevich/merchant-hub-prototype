@@ -23,6 +23,8 @@ import SearchGlyph from "./assets/icons/search.svg?react";
 import SidebarCollapseGlyph from "./assets/icons/sidebar-collapse.svg?react";
 import TaxesGlyph from "./assets/icons/taxes.svg?react";
 
+import { Button } from "@/components/ui/button";
+
 import {
   NAV_SECTIONS_V2,
   SKIP_RECENT_IDS,
@@ -57,24 +59,45 @@ function CalendarGlyph({ className }) {
 
 /* ─── Customize Filters: full filter catalogue (kind = main panel input) ─── */
 const ALL_FILTERS = [
-  { id: "order-id", label: "Order ID", description: "by order identifier", kind: "text" },
-  { id: "email", label: "Customer email", description: "by customer email adress", kind: "text" },
-  { id: "created", label: "Created", description: "Transaction creation date", kind: "date" },
-  { id: "updated", label: "Updated", description: "Transaction update date", kind: "date" },
-  { id: "channel", label: "Channel", description: "Transaction date has been updated.", kind: "select" },
-  { id: "amount", label: "Amount", description: "Amount in USD, EUR, GBP or other", kind: "amount" },
-  { id: "currency", label: "Currency", description: "USD, EUR, GBP and more", kind: "select" },
-  { id: "customer-id", label: "Customer ID", description: "By customer identifier", kind: "text" },
-  { id: "status", label: "Status", description: "Actual transaction status", kind: "select" },
-  { id: "refund", label: "Refund", description: "Refund status", kind: "select" },
-  { id: "cardholder-name", label: "Cardholder name", description: "First name, Second name", kind: "text" },
-  { id: "descriptor", label: "Descriptor", description: "Statement descriptor text", kind: "select" },
+  { id: "order-id",        label: "Order ID",         description: "By order identifier",           kind: "text",   group: "Order" },
+  { id: "email",           label: "Email",            description: "By customer email address",     kind: "text",   group: "Customer" },
+  { id: "created-from",    label: "Created at from",  description: "Start of creation date range",  kind: "date",   group: "Date" },
+  { id: "created-to",      label: "Created at to",    description: "End of creation date range",    kind: "date",   group: "Date" },
+  { id: "updated-from",    label: "Updated at from",  description: "Start of update date range",    kind: "date",   group: "Date" },
+  { id: "updated-to",      label: "Updated at to",    description: "End of update date range",      kind: "date",   group: "Date" },
+  { id: "channel",         label: "Channel",          description: "Transaction channel",            kind: "select", group: "Transaction" },
+  { id: "amount",          label: "Amount",           description: "Amount in USD, EUR, GBP or other", kind: "amount", group: "Transaction" },
+  { id: "currency",        label: "Currency",         description: "USD, EUR, GBP and more",        kind: "select", group: "Transaction" },
+  { id: "customer-id",     label: "Customer ID",      description: "By customer identifier",        kind: "text",   group: "Customer" },
+  { id: "status",          label: "Status",           description: "Actual transaction status",      kind: "select", group: "Transaction" },
+  { id: "refund",          label: "Refund",           description: "Refund status",                  kind: "select", group: "Transaction" },
+  { id: "payment-type",    label: "Payment type",     description: "One-time or recurring",          kind: "select", group: "Payment" },
+  { id: "payment-method",  label: "Payment method",   description: "Card, Apple Pay, Google Pay…",   kind: "select", group: "Payment" },
+  { id: "auth-code",       label: "Auth code",        description: "Authorization code",             kind: "text",   group: "Payment" },
+  { id: "decline-code",    label: "Decline code",     description: "Decline reason code",            kind: "text",   group: "Payment" },
+  { id: "card-number",     label: "Card number",      description: "Masked card number",             kind: "text",   group: "Card" },
+  { id: "card-id",         label: "Card ID",          description: "Internal card identifier",       kind: "text",   group: "Card" },
+  { id: "card-brand",      label: "Card brand",       description: "Visa, Mastercard, Amex…",        kind: "select", group: "Card" },
+  { id: "cardholder-name", label: "Cardholder name",  description: "First name, last name",          kind: "text",   group: "Card" },
+  { id: "secured",         label: "Secured",          description: "3DS authentication status",      kind: "select", group: "Card" },
+  { id: "solidgate-id",    label: "Solidgate ID",     description: "Internal Solidgate identifier",  kind: "text",   group: "System" },
+  { id: "website",         label: "Website",          description: "Merchant website domain",        kind: "text",   group: "System" },
+  { id: "ip-address",      label: "IP address",       description: "Customer IP address",            kind: "text",   group: "Customer" },
+  { id: "ip-country",      label: "IP country",       description: "Country by IP geolocation",      kind: "select", group: "Customer" },
+  { id: "descriptor",      label: "Descriptor",       description: "Statement descriptor text",      kind: "select", group: "Transaction" },
+  { id: "traffic-source",  label: "Traffic source",   description: "Referral traffic source",        kind: "select", group: "System" },
+  { id: "issuing-bank",    label: "Issuing bank",     description: "Card issuing bank name",         kind: "text",   group: "Card" },
+  { id: "product-id",      label: "Product ID",       description: "Product identifier",             kind: "text",   group: "System" },
+  { id: "product-type",    label: "Product type",     description: "Type of product",                kind: "select", group: "System" },
+  { id: "arn-code",        label: "ARN code",         description: "Acquirer reference number",      kind: "text",   group: "Payment" },
 ];
+
+const FILTER_GROUP_ORDER = ["Order", "Date", "Transaction", "Payment", "Card", "Customer", "System"];
 
 /** Always on the panel / in “Added”; no toggle — drag only to reorder. */
 const LOCKED_FILTER_IDS = new Set(["order-id", "email"]);
 
-const DEFAULT_ADDED_IDS = ["order-id", "email", "created", "updated"];
+const DEFAULT_ADDED_IDS = ["order-id", "email", "created-from", "updated-from"];
 
 /** Dedupe, drop unknown ids, ensure locked filters exist (order preserved). */
 function normalizeActiveFilterIds(orderedIds) {
@@ -100,16 +123,39 @@ function normalizeActiveFilterIds(orderedIds) {
   return out;
 }
 
+function emptyFilterValues() {
+  return Object.fromEntries(ALL_FILTERS.map((f) => [f.id, ""]));
+}
+
+/** Run on Apply: only non-empty drafts are validated. */
+function validateFilterPanel(activeIds, draft, toolbarDraft) {
+  const fieldErrors = {};
+  for (const id of activeIds) {
+    const v = (draft[id] ?? "").trim();
+    if (!v) continue;
+    if (id === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) {
+      fieldErrors[id] = "Enter a valid email address";
+    } else if ((id === "order-id" || id === "customer-id") && v.length < 2) {
+      fieldErrors[id] = "Use at least 2 characters";
+    } else if (id === "amount" && /[^\d.,\s]/.test(v)) {
+      fieldErrors[id] = "Use numbers only";
+    }
+  }
+  const t = toolbarDraft.trim();
+  const toolbarError = t.length === 1 ? "Use at least 2 characters" : null;
+  return { fieldErrors, toolbarError };
+}
+
 const DEFAULT_PRESETS = [
   {
     id: "finances",
     label: "Finances",
-    filters: ["order-id", "amount", "currency", "status", "created", "updated"],
+    filters: ["order-id", "amount", "currency", "status", "created-from", "updated-from"],
   },
   {
     id: "data-analytics",
     label: "Data analytics",
-    filters: ["order-id", "channel", "status", "amount", "currency", "created"],
+    filters: ["order-id", "channel", "status", "amount", "currency", "created-from"],
   },
   {
     id: "customer-support",
@@ -489,6 +535,26 @@ function CustomizeFiltersPopover({
     return availableSort === "asc" ? cmp : -cmp;
   });
 
+  const groupedAvailable = useMemo(() => {
+    const groups = [];
+    const byGroup = new Map();
+    for (const f of filteredAvailable) {
+      const g = f.group || "Other";
+      if (!byGroup.has(g)) {
+        const entry = { group: g, items: [] };
+        byGroup.set(g, entry);
+        groups.push(entry);
+      }
+      byGroup.get(g).items.push(f);
+    }
+    groups.sort((a, b) => {
+      const ai = FILTER_GROUP_ORDER.indexOf(a.group);
+      const bi = FILTER_GROUP_ORDER.indexOf(b.group);
+      return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+    });
+    return groups;
+  }, [filteredAvailable]);
+
   return (
     <div className={`cf-popover${positioned ? " cf-popover--visible" : ""}`} ref={popoverRef}>
       {/* ── Content area ── */}
@@ -523,7 +589,7 @@ function CustomizeFiltersPopover({
             </div>
 
             {/* Personal presets */}
-            {(personalPresets.length > 0 || savingPreset) && (
+            {personalPresets.length > 0 && (
               <div className="cf-preset-group">
                 <div className="cf-preset-heading">
                   <span className="cf-preset-heading__text">Personal</span>
@@ -557,19 +623,6 @@ function CustomizeFiltersPopover({
                       </button>
                     </div>
                   ))}
-                  {savingPreset && (
-                    <div className="cf-preset-item cf-preset-item--editing">
-                      <input
-                        ref={presetInputRef}
-                        className="cf-preset-item__input"
-                        type="text"
-                        placeholder="Preset name"
-                        value={presetName}
-                        onChange={(e) => setPresetName(e.target.value)}
-                        onKeyDown={handlePresetKeyDown}
-                      />
-                    </div>
-                  )}
                 </div>
               </div>
             )}
@@ -668,17 +721,22 @@ function CustomizeFiltersPopover({
                   </button>
                 </div>
                 <div className="cf-filter-list">
-                  {filteredAvailable.map((f) => (
-                    <div key={f.id} className="cf-filter-row cf-filter-row--available">
-                      <div className="cf-filter-row__drag cf-filter-row__drag--empty" />
-                      <div className="cf-filter-row__info">
-                        <span className="cf-filter-row__label">{f.label}</span>
-                        <span className="cf-filter-row__desc">{f.description}</span>
-                      </div>
-                      <ToggleSwitch
-                        checked={false}
-                        onChange={() => toggleFilter(f.id)}
-                      />
+                  {groupedAvailable.map((g) => (
+                    <div key={g.group} className="cf-filter-group">
+                      <div className="cf-filter-group__name">{g.group}</div>
+                      {g.items.map((f) => (
+                        <div key={f.id} className="cf-filter-row cf-filter-row--available">
+                          <div className="cf-filter-row__drag cf-filter-row__drag--empty" />
+                          <div className="cf-filter-row__info">
+                            <span className="cf-filter-row__label">{f.label}</span>
+                            <span className="cf-filter-row__desc">{f.description}</span>
+                          </div>
+                          <ToggleSwitch
+                            checked={false}
+                            onChange={() => toggleFilter(f.id)}
+                          />
+                        </div>
+                      ))}
                     </div>
                   ))}
                 </div>
@@ -695,14 +753,36 @@ function CustomizeFiltersPopover({
 
       {/* ── Footer ── */}
       <div className="cf-footer">
-        <div className="cf-footer__actions">
-          <button type="button" className="cf-footer__btn cf-footer__btn--cancel" onClick={handleCancel}>
-            Cancel
-          </button>
-          <button type="button" className="cf-footer__btn cf-footer__btn--save" onClick={handleSavePreset}>
-            {savingPreset ? "Save" : "Save as preset"}
-          </button>
-        </div>
+        {savingPreset ? (
+          <div className="cf-footer__save-row">
+            <input
+              ref={presetInputRef}
+              className="cf-footer__preset-input"
+              type="text"
+              placeholder="Preset name"
+              value={presetName}
+              onChange={(e) => setPresetName(e.target.value)}
+              onKeyDown={handlePresetKeyDown}
+            />
+            <button type="button" className="cf-footer__btn cf-footer__btn--save" onClick={handleSavePreset}>
+              Save
+            </button>
+            <Button
+              type="button"
+              variant="secondary"
+              className="filters-reset"
+              onClick={handleCancel}
+            >
+              Cancel
+            </Button>
+          </div>
+        ) : (
+          <div className="cf-footer__actions">
+            <button type="button" className="cf-footer__btn cf-footer__btn--save" onClick={handleSavePreset}>
+              Save as preset
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -776,7 +856,13 @@ function SideIcon({ icon, className = "", size = 16 }) {
   });
 }
 
-function renderFilterInput(field) {
+function renderFilterInput(field, ctx) {
+  const { value, onChange, disabled, invalid } = ctx;
+  const common = {
+    value: value ?? "",
+    disabled: Boolean(disabled),
+    "aria-invalid": invalid ? true : undefined,
+  };
   switch (field.kind) {
     case "date":
       return (
@@ -787,13 +873,14 @@ function renderFilterInput(field) {
             readOnly
             placeholder="DD / MM / YYYY"
             aria-label={field.label}
+            {...common}
           />
         </>
       );
     case "select":
       return (
         <>
-          <input type="text" readOnly placeholder="" aria-label={field.label} />
+          <input type="text" readOnly placeholder="" aria-label={field.label} {...common} />
           <SideIcon icon={ChevronDownGlyph} />
         </>
       );
@@ -805,12 +892,26 @@ function renderFilterInput(field) {
             <SideIcon icon={ChevronDownGlyph} />
           </div>
           <div className="unit-textfield__split unit-textfield__split--main">
-            <input type="text" readOnly placeholder="Amount" aria-label="Amount" />
+            <input
+              type="text"
+              placeholder="Amount"
+              aria-label="Amount"
+              onChange={onChange}
+              {...common}
+            />
           </div>
         </>
       );
     default:
-      return <input type="text" readOnly placeholder="" aria-label={field.label} />;
+      return (
+        <input
+          type="text"
+          placeholder=""
+          aria-label={field.label}
+          onChange={onChange}
+          {...common}
+        />
+      );
   }
 }
 
@@ -856,8 +957,53 @@ export default function App() {
     });
   }, []);
 
-  /** Toolbar badge = filters with applied values only. Not tracked in this prototype yet. */
-  const filterToolbarBadgeCount = 0;
+  const [filterDraftValues, setFilterDraftValues] = useState(emptyFilterValues);
+  const [filterAppliedValues, setFilterAppliedValues] = useState(emptyFilterValues);
+  const [filterFieldErrors, setFilterFieldErrors] = useState(() => ({}));
+  const [appliedFiltersSearch, setAppliedFiltersSearch] = useState("");
+  const [toolbarSearchError, setToolbarSearchError] = useState(null);
+
+  const filterToolbarBadgeCount = useMemo(() => {
+    let n = 0;
+    for (const id of activePanelFilterIds) {
+      if ((filterAppliedValues[id] ?? "").trim()) n += 1;
+    }
+    if (appliedFiltersSearch.trim()) n += 1;
+    return n;
+  }, [activePanelFilterIds, filterAppliedValues, appliedFiltersSearch]);
+
+  const setFilterDraft = useCallback((id, next) => {
+    setFilterFieldErrors((prev) => {
+      if (!prev[id]) return prev;
+      const { [id]: _, ...rest } = prev;
+      return rest;
+    });
+    setFilterDraftValues((prev) => ({ ...prev, [id]: typeof next === "function" ? next(prev[id] ?? "") : next }));
+  }, []);
+
+  const handleApplyFilters = useCallback(() => {
+    const { fieldErrors, toolbarError } = validateFilterPanel(
+      activePanelFilterIds,
+      filterDraftValues,
+      filtersSearch
+    );
+    setFilterFieldErrors(fieldErrors);
+    setToolbarSearchError(toolbarError);
+    if (Object.keys(fieldErrors).length > 0 || toolbarError) return;
+    setFilterAppliedValues({ ...filterDraftValues });
+    setAppliedFiltersSearch(filtersSearch);
+  }, [activePanelFilterIds, filterDraftValues, filtersSearch]);
+
+  const handleResetFilters = useCallback(() => {
+    setPanelFilterIds(["order-id", "email"]);
+    const empty = emptyFilterValues();
+    setFilterDraftValues(empty);
+    setFilterAppliedValues(empty);
+    setFilterFieldErrors({});
+    setFiltersSearch("");
+    setAppliedFiltersSearch("");
+    setToolbarSearchError(null);
+  }, [setPanelFilterIds]);
 
   const customizeBtnRef = useRef(null);
   const filtersPanelBodyRef = useRef(null);
@@ -1337,7 +1483,15 @@ export default function App() {
                 </button>
 
                 <div className="filters-toolbar-search">
-                  <div className="unit-textfield unit-textfield--sm">
+                  <div
+                    className={[
+                      "unit-textfield",
+                      "unit-textfield--sm",
+                      toolbarSearchError ? "unit-textfield--error" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                  >
                     <div className="unit-textfield__outline">
                       <div className="unit-textfield__field">
                         <SideIcon icon={SearchGlyph} />
@@ -1347,11 +1501,35 @@ export default function App() {
                           autoComplete="off"
                           spellCheck={false}
                           value={filtersSearch}
-                          onChange={(e) => setFiltersSearch(e.target.value)}
+                          onChange={(e) => {
+                            setToolbarSearchError(null);
+                            setFiltersSearch(e.target.value);
+                          }}
                           aria-label="Search"
+                          aria-invalid={toolbarSearchError ? true : undefined}
                         />
+                        {filtersSearch ? (
+                          <button
+                            type="button"
+                            className="filters-toolbar-search-clear"
+                            aria-label="Clear search"
+                            onClick={() => {
+                              setToolbarSearchError(null);
+                              setFiltersSearch("");
+                            }}
+                          >
+                            ×
+                          </button>
+                        ) : null}
                       </div>
                     </div>
+                    {toolbarSearchError ? (
+                      <div className="unit-textfield__helper-wrapper">
+                        <span className="unit-textfield__helper" role="alert">
+                          {toolbarSearchError}
+                        </span>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
 
@@ -1377,26 +1555,53 @@ export default function App() {
               >
                 <div className="filters-panel-fields">
                   {activePanelFilterIds
-                    .map((id) => ALL_FILTERS.find((f) => f.id === id))
+                    .map((id) => ALL_FILTERS.find((x) => x.id === id))
                     .filter(Boolean)
-                    .map((f) => (
-                      <div key={f.id} className="filters-field">
-                        <p className="filters-field-label">{f.label}</p>
-                        <div className="unit-textfield unit-textfield--sm">
-                          <div className="unit-textfield__outline">
-                            <div
-                              className={
-                                f.kind === "amount"
-                                  ? "unit-textfield__field unit-textfield__field--split"
-                                  : "unit-textfield__field"
-                              }
-                            >
-                              {renderFilterInput(f)}
+                    .map((f) => {
+                      const err = filterFieldErrors[f.id];
+                      const disabledField = f.id === "descriptor";
+                      return (
+                        <div key={f.id} className="filters-field">
+                          <div
+                            className={[
+                              "unit-textfield",
+                              "unit-textfield--sm",
+                              err ? "unit-textfield--error" : "",
+                              disabledField ? "unit-textfield--disabled" : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
+                          >
+                            <div className="unit-textfield__label-wrapper">
+                              <div className="unit-textfield__label">{f.label}</div>
                             </div>
+                            <div className="unit-textfield__outline">
+                              <div
+                                className={
+                                  f.kind === "amount"
+                                    ? "unit-textfield__field unit-textfield__field--split"
+                                    : "unit-textfield__field"
+                                }
+                              >
+                                {renderFilterInput(f, {
+                                  value: filterDraftValues[f.id] ?? "",
+                                  onChange: (e) => setFilterDraft(f.id, e.target.value),
+                                  disabled: disabledField,
+                                  invalid: Boolean(err),
+                                })}
+                              </div>
+                            </div>
+                            {err ? (
+                              <div className="unit-textfield__helper-wrapper">
+                                <span className="unit-textfield__helper" role="alert">
+                                  {err}
+                                </span>
+                              </div>
+                            ) : null}
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                 </div>
 
                 <div className="filters-panel-footer">
@@ -1410,14 +1615,10 @@ export default function App() {
                     <span>Customize</span>
                   </button>
                   <div className="filters-panel-footer-actions">
-                    <button
-                      type="button"
-                      className="filters-reset"
-                      onClick={() => setPanelFilterIds(["order-id", "email"])}
-                    >
+                    <button type="button" className="filters-reset" onClick={handleResetFilters}>
                       Reset all
                     </button>
-                    <button type="button" className="filters-apply">
+                    <button type="button" className="filters-apply" onClick={handleApplyFilters}>
                       Apply
                     </button>
                   </div>

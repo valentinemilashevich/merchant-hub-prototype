@@ -32,6 +32,16 @@
   min-width: 0;
 }
 
+/* Figma LabelWrapper — sibling of OutlineWrapper / HelperWrapper */
+.unit-textfield__label-wrapper {
+  min-width: 0;
+}
+
+/* Figma HelperWrapper */
+.unit-textfield__helper-wrapper {
+  min-width: 0;
+}
+
 .unit-textfield__label {
   font: var(--font-body-medium);
   line-height: 20px;
@@ -67,32 +77,69 @@
   color: var(--color-burgundy-800);
 }
 
-/* Outer shell: white + shadow-sm; focus adds 2px accent-300 ring */
+/*
+ * Figma: зовнішній stroke OutlineWrapper — alignment Outside (не другий border-box всередині).
+ * Реалізація: ::after з inset -2px + border 2px accent-300 лише в active — без зазору з field.
+ */
 .unit-textfield__outline {
-  display: block;
+  position: relative;
+  z-index: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  align-self: stretch;
   width: 100%;
   min-width: 0;
-  border-radius: var(--radius-sm);
-  background: var(--color-soft-100);
+  box-sizing: border-box;
+  padding: 0;
+  overflow: visible;
+  border: none;
+  border-radius: var(--unit-radius-sm, 4px);
+  background: var(--unit-color-soft-100, #ffffff);
   box-shadow: var(--shadow-sm);
   transition: box-shadow 0.15s ease;
 }
 
-.unit-textfield__outline:focus-within {
-  box-shadow: var(--shadow-sm), 0 0 0 2px var(--tf-ring-focus);
+.unit-textfield__outline::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  z-index: 2;
+  box-sizing: border-box;
+  border-radius: calc(var(--unit-radius-sm, 4px) + 2px);
+  border: 2px solid var(--unit-color-accent-300, #b7d8f8);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
 }
 
-/* Inner field: 1px border, 40px / 32px height */
+.unit-textfield:not(.unit-textfield--disabled) .unit-textfield__outline:focus-within::after {
+  opacity: 1;
+}
+
+.unit-textfield--disabled .unit-textfield__outline::after {
+  display: none;
+}
+
+/* Field: одна видима рамка 1px; без margin — зовнішній ring тільки ::after. */
 .unit-textfield__field {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: row;
   align-items: center;
+  flex: 1 1 auto;
+  align-self: stretch;
+  width: auto;
+  min-width: 0;
+  box-sizing: border-box;
+  margin: 0;
   gap: var(--tf-inner-gap);
   min-height: var(--tf-height-md);
   padding: var(--tf-padding-y-md) var(--tf-padding-x-md);
   border: 1px solid var(--tf-border-default);
-  border-radius: var(--radius-sm);
-  background: var(--color-soft-100);
+  border-radius: var(--unit-radius-sm, 4px);
+  background: var(--unit-color-soft-100);
   transition: border-color 0.15s ease;
 }
 
@@ -100,8 +147,12 @@
   border-color: var(--tf-border-hover);
 }
 
+.unit-textfield--error .unit-textfield__outline:hover:not(:focus-within) .unit-textfield__field {
+  border-color: var(--tf-border-error);
+}
+
 .unit-textfield__outline:focus-within .unit-textfield__field {
-  border-color: var(--tf-border-focus);
+  border-color: var(--unit-color-accent-700);
 }
 
 /* Disabled */
@@ -122,7 +173,7 @@
   color: var(--color-dense-400);
 }
 
-/* Error */
+/* Error — красная обводка только у field; outline как у всех вне active */
 .unit-textfield--error .unit-textfield__field {
   border-color: var(--tf-border-error);
 }
@@ -163,6 +214,7 @@
 .unit-textfield--sm .unit-textfield__field {
   min-height: var(--tf-height-sm);
   padding: var(--tf-padding-y-sm) var(--tf-padding-x-sm);
+  border-radius: var(--unit-radius-sm, 4px);
 }
 
 /* Split field (e.g. Compare | Amount) */
@@ -192,8 +244,16 @@
   border-right-color: var(--tf-border-hover);
 }
 
+.unit-textfield--error .unit-textfield__outline:hover:not(:focus-within) .unit-textfield__split--compare {
+  border-right-color: var(--tf-border-error);
+}
+
 .unit-textfield__outline:focus-within .unit-textfield__split--compare {
-  border-right-color: var(--tf-border-focus);
+  border-right-color: var(--unit-color-accent-700);
+}
+
+.unit-textfield--error .unit-textfield__outline:focus-within .unit-textfield__split--compare {
+  border-right-color: var(--tf-border-error);
 }
 
 .unit-textfield--error .unit-textfield__split--compare {
