@@ -722,8 +722,13 @@ body {
 }
 
 .page-primary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  padding: 8px 12px;
+  min-height: var(--btn-height-md);
+  height: var(--btn-height-md);
+  padding: 0 var(--space-300);
   border-radius: var(--radius-md);
   border: none;
   background: var(--color-dense-900);
@@ -731,6 +736,7 @@ body {
   font: var(--font-body-medium);
   font-feature-settings: var(--font-feature);
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .page-breadcrumb {
@@ -1007,7 +1013,7 @@ html,
   --fp-toolbar-search-max: 20rem; /* 320px — set to exact Figma width if needed */
   --fp-panel-pad: var(--space-300); /* 12px */
   --fp-panel-radius: var(--radius-lg); /* 8px */
-  --fp-grid-gap: var(--space-300); /* 12px — Figma fields 431:35207 */
+  --fp-grid-gap: var(--space-300); /* 12px — Figma panel 352:11985 + fields grid */
   --fp-field-label-gap: var(--space-100); /* 4px — .unit-textfield--sm */
   --fp-footer-divider-gap: var(--space-300); /* 12px above divider + 12px below */
 
@@ -1028,7 +1034,7 @@ html,
   min-width: 0;
 }
 
-/* Expanded panel: gray surface only (toolbar excluded) */
+/* Expanded panel: gray surface only (toolbar excluded); Figma 352:11985 — column gap 16 */
 .filters-panel {
   background: var(--color-soft-200, #fafafa);
   border-radius: var(--radius-md);
@@ -1036,7 +1042,7 @@ html,
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: var(--space-400);
   padding: var(--fp-panel-pad);
   box-sizing: border-box;
 }
@@ -1047,7 +1053,9 @@ html,
   align-items: center;
   justify-content: center;
   gap: 4px;
-  padding: 4px 8px;
+  min-height: var(--btn-height-md);
+  height: var(--btn-height-md);
+  padding: 0 var(--space-200);
   border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: var(--radius-md);
   background: var(--color-soft-100);
@@ -1068,14 +1076,24 @@ html,
   border-color: var(--color-soft-700);
 }
 
-.filters-toolbar-btn.is-active {
-  background: var(--color-soft-100);
-  border-color: rgba(0, 0, 0, 0.12);
+/* Disclosure / panel open = pressed (Unit UI). Reuse: add .is-active when open +
+   aria-expanded on the same control (Filter, Customize, future toggles). */
+.filters-toolbar-btn.is-active,
+.filters-customize-link.is-active {
+  background: var(--color-soft-400);
+  border-color: var(--color-soft-700);
+  box-shadow: none;
+  color: var(--color-dense-900);
 }
 
-/* Filter: same shadow as Sort/View by default; pressed (panel open) = flat */
-.filters-toolbar-btn--filter.is-active {
-  box-shadow: none;
+.filters-toolbar-btn.is-active:hover,
+.filters-customize-link.is-active:hover {
+  background: var(--color-soft-400);
+  border-color: var(--color-soft-700);
+}
+
+.filters-toolbar-btn.is-active .filters-toolbar-btn__icon {
+  color: var(--color-dense-900);
 }
 
 .filters-toolbar-btn__icon {
@@ -1110,40 +1128,54 @@ html,
   max-width: 248px;
 }
 
-.filters-toolbar-search .unit-textfield__outline {
+/* Toolbar search, Customize popover search, footer preset field — same unit-textfield surface */
+.unit-textfield.filters-search-unit {
+  width: 100%;
+  min-width: 0;
+}
+
+.unit-textfield.filters-search-unit .unit-textfield__outline {
   border-radius: var(--radius-md);
   padding: 0;
   overflow: visible;
   box-sizing: border-box;
 }
 
-.filters-toolbar-search .unit-textfield__outline::after {
+.unit-textfield.filters-search-unit .unit-textfield__outline::after {
   border-radius: calc(var(--unit-radius-md, 6px) + 2px);
 }
 
-.filters-toolbar-search .unit-textfield__field {
+.unit-textfield.filters-search-unit .unit-textfield__field {
+  min-height: var(--tf-height-sm);
+  height: var(--tf-height-sm);
   border-radius: var(--radius-md);
-  border-color: rgba(0, 0, 0, 0.12);
-  box-shadow: 0px 2px 4px -2px rgba(0, 0, 0, 0.12);
-  padding: 4px;
-  gap: 4px;
+  border-color: var(--color-dense-900-opacity-400);
+  box-shadow: var(--shadow-sm);
+  padding: 0 var(--space-100);
+  gap: var(--space-100);
 }
 
-.filters-toolbar-search .unit-textfield:not(.unit-textfield--disabled):not(.unit-textfield--error)
+.unit-textfield.filters-search-unit .unit-textfield__field input {
+  padding-inline: var(--space-100);
+  box-sizing: border-box;
+}
+
+/* Preset name: лише поле дає 4px від рамки — без дубля всередині input */
+.cf-footer__preset-field.unit-textfield.filters-search-unit .unit-textfield__field input {
+  padding-inline: 0;
+}
+
+.unit-textfield.filters-search-unit:not(.unit-textfield--disabled):not(.unit-textfield--error)
   .unit-textfield__outline:focus-within
   .unit-textfield__field {
   border-color: var(--unit-color-accent-700);
 }
 
-.filters-toolbar-search .unit-textfield.unit-textfield--error .unit-textfield__outline:focus-within .unit-textfield__field {
+.unit-textfield.filters-search-unit.unit-textfield--error .unit-textfield__outline:focus-within .unit-textfield__field {
   border-color: var(--tf-border-error);
 }
 
-.filters-toolbar-search .unit-textfield {
-  width: 100%;
-}
-
-.filters-toolbar-search-clear {
+.filters-search-clear {
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -1162,7 +1194,7 @@ html,
   cursor: pointer;
 }
 
-.filters-toolbar-search-clear:hover {
+.filters-search-clear:hover {
   color: var(--color-dense-700);
   background: var(--color-dense-900-opacity-100);
 }
@@ -1176,7 +1208,7 @@ html,
   flex-shrink: 0;
 }
 
-/* Figma node 431:35207 — fields grid (4×N, gap 12, cell max 320) */
+/* Figma 431:35207 / 352:11985 — fields grid (4×N, gap 12, cell max 320) */
 .filters-panel-fields {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1213,6 +1245,29 @@ html,
   box-sizing: border-box;
 }
 
+.filters-date-range-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-200);
+  width: 100%;
+  padding: var(--unit-space-100) 0;
+  box-sizing: border-box;
+}
+
+.filters-date-range-line {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-50);
+  min-width: 0;
+}
+
+.filters-date-range-hint {
+  font: var(--font-caption-normal);
+  color: var(--color-dense-300);
+  letter-spacing: 0.12px;
+  font-feature-settings: var(--font-feature);
+}
+
 /* Sans Serif/Body/Medium — label above field */
 .filters-field-label {
   font-weight: var(--fw-medium);
@@ -1238,8 +1293,8 @@ html,
 }
 
 .filters-field .unit-textfield__field--split {
-  height: 34px;
-  min-height: 34px;
+  height: var(--tf-height-sm);
+  min-height: var(--tf-height-sm);
 }
 
 /* Value row: gap 8px; chevron pinned right (Figma Main Field) */
@@ -1309,7 +1364,7 @@ html,
   justify-content: space-between;
   align-items: center;
   gap: var(--space-300);
-  margin-top: var(--space-300);
+  margin-top: 0;
 }
 
 .filters-panel-footer-actions {
@@ -1352,8 +1407,9 @@ html,
 
 .filters-apply,
 .filters-reset {
-  min-width: 4.5rem;
-  padding: 4px 8px;
+  min-height: var(--btn-height-md);
+  height: var(--btn-height-md);
+  padding: 0 var(--space-200);
   border-radius: var(--radius-sm);
   font: var(--font-body-medium);
   font-feature-settings: var(--font-feature);
@@ -1361,6 +1417,9 @@ html,
   letter-spacing: var(--ls-neutral);
   cursor: pointer;
   box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .filters-apply {
@@ -1382,14 +1441,21 @@ button[data-slot="button"].filters-reset {
   box-shadow: 0px 2px 4px -2px rgba(0, 0, 0, 0.12);
 }
 
-/* shadcn Button (variant secondary): Figma 442:12627 + same surface as filter bar “Reset” */
+/* shadcn Button (variant secondary): та сама висота medium 32px, що й .filters-reset */
 button[data-slot="button"].filters-reset {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: var(--btn-height-md) !important;
+  height: var(--btn-height-md) !important;
+  padding: 0 var(--space-200) !important;
   border-radius: var(--radius-sm);
   background: var(--color-soft-100) !important;
   color: var(--color-dense-900) !important;
   border: 1px solid rgba(0, 0, 0, 0.12);
   font: var(--font-label-medium);
   line-height: var(--lh-300);
+  box-sizing: border-box;
 }
 
 .filters-reset:hover:not(:disabled) {
@@ -1426,26 +1492,40 @@ button[data-slot="button"].filters-reset:disabled {
   font-feature-settings: var(--font-feature);
 }
 
-/* ── Customize button (Figma: settings-01 icon + grey text) ── */
+/* ── Customize — як Reset: кнопка medium 32px + textfield sm у рядку ── */
 .filters-customize-link {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  color: var(--color-dense-200);
+  min-height: var(--btn-height-md);
+  height: var(--btn-height-md);
+  padding: 0 var(--space-200);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: var(--radius-sm);
+  background: var(--color-soft-100);
+  color: var(--color-dense-900);
+  box-shadow: 0px 2px 4px -2px rgba(0, 0, 0, 0.12);
   font: var(--font-body-medium);
   font-feature-settings: var(--font-feature);
+  line-height: var(--lh-200);
+  letter-spacing: var(--ls-neutral);
+  cursor: pointer;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  max-width: 100%;
+  transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
 }
 .filters-customize-link:hover {
-  color: var(--color-dense-600);
+  background: var(--color-soft-300);
+  border-color: var(--color-soft-700);
+  color: var(--color-dense-900);
 }
 .filters-customize-link .icon {
   flex-shrink: 0;
   width: 16px;
   height: 16px;
+  color: var(--color-dense-900);
 }
 
 /* ─────────────────────────────────────────────
@@ -1617,17 +1697,36 @@ button[data-slot="button"].filters-reset:disabled {
   pointer-events: auto;
 }
 
-/* Body: left presets + right filters */
-.cf-body {
+/* Main row: presets + divider full height; filters column stacks list + footer (Figma 445:12952, 445:12869) */
+.cf-popover__main {
   display: flex;
+  flex: 1;
+  min-height: 0;
+  align-items: stretch;
+}
+
+.cf-filters-wrap {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header + scroll list share one flex column above footer */
+.cf-filters-stack {
+  display: flex;
+  flex-direction: column;
   flex: 1;
   min-height: 0;
 }
 
-/* ── Left panel: Presets ── */
+/* ── Left panel: Presets (column + border run to modal bottom) ── */
 .cf-presets {
   width: 220px;
   flex-shrink: 0;
+  align-self: stretch;
+  min-height: 0;
   background: var(--color-soft-100);
   border-right: 1px solid rgba(0, 0, 0, 0.08);
   overflow-x: hidden;
@@ -1659,8 +1758,8 @@ button[data-slot="button"].filters-reset:disabled {
 
 .cf-preset-heading__text {
   font: var(--font-caption-normal);
-  font-weight: 500;
-  color: var(--color-dense-300);
+  font-weight: var(--fw-medium);
+  color: var(--color-dense-900);
   letter-spacing: 0.12px;
   white-space: nowrap;
   font-feature-settings: var(--font-feature);
@@ -1746,20 +1845,21 @@ button[data-slot="button"].filters-reset:disabled {
   color: var(--color-dense-200);
 }
 
-/* ── Right panel: Filters ── */
+/* ── Right panel: Filters (scroll area above footer) ── */
 .cf-filters {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
 
-/* Sticky header — Figma 421:33436 export: white → transparent (bg-gradient-to-t) */
+/* Sticky header — Figma 437:11912 (Filters file) */
 .cf-filters-header {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  padding: var(--space-400) var(--space-400) var(--space-300);
+  padding: var(--space-400) var(--space-600) var(--space-300) var(--space-400);
   margin-bottom: 0px;
   position: relative;
   z-index: 1;
@@ -1774,7 +1874,7 @@ button[data-slot="button"].filters-reset:disabled {
   display: flex;
   flex-direction: column;
   gap: var(--space-200);
-  padding-inline: var(--space-200);
+  padding-inline-start: var(--space-400);
 }
 
 .cf-filters-heading {
@@ -1786,58 +1886,16 @@ button[data-slot="button"].filters-reset:disabled {
 
 .cf-filters-heading__text {
   font: var(--font-caption-normal);
-  font-weight: 500;
-  color: var(--color-dense-300);
+  font-weight: var(--fw-medium);
+  color: var(--color-dense-900);
   letter-spacing: 0.12px;
   white-space: nowrap;
   font-feature-settings: var(--font-feature);
 }
 
-/* Search input */
-.cf-filters-search {
-  display: flex;
-  align-items: center;
-  gap: var(--space-100);
-  padding: var(--space-100);
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  border-radius: var(--radius-md);
-  background: var(--color-soft-100);
-  box-shadow: 0px 2px 4px -2px rgba(0, 0, 0, 0.12);
-}
+/* Popover filter search uses .filters-search-unit (see toolbar block) */
 
-
-.cf-filters-search__icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  flex-shrink: 0;
-}
-.cf-filters-search__icon .icon {
-  width: 16px;
-  height: 16px;
-  color: var(--color-dense-200);
-}
-
-.cf-filters-search__input {
-  flex: 1;
-  min-width: 0;
-  border: none;
-  outline: none;
-  background: none;
-  font: var(--font-label-medium);
-  font-weight: 400;
-  color: var(--color-dense-900);
-  font-feature-settings: var(--font-feature);
-  padding: 0 var(--space-100);
-  line-height: 24px;
-}
-.cf-filters-search__input::placeholder {
-  color: var(--color-dense-200);
-}
-
-/* Scrollable filter list area */
+/* Scrollable filter list area — Figma 437:11799: pb 16; horizontal inset on sections */
 .cf-filters-scroll {
   flex: 1;
   min-height: 0;
@@ -1846,29 +1904,42 @@ button[data-slot="button"].filters-reset:disabled {
   display: flex;
   flex-direction: column;
   gap: var(--space-300);
-  padding: 0 var(--space-400) var(--space-400);
+  padding: 0 0 var(--space-400);
   scrollbar-width: none;
 }
 .cf-filters-scroll::-webkit-scrollbar { display: none; }
 
-/* Section: Added / Available */
+/* Section: Added / Available — Figma 437:11801 / 437:11840 */
 .cf-filter-section {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-100);
+  padding-left: var(--space-100);
+  padding-right: var(--space-500);
+  box-sizing: border-box;
+}
+
+/* Figma 448:13271 — extra inset so row headers align vs list rows */
+.cf-filter-section__header-rail {
+  padding-left: var(--space-500);
+  padding-right: var(--space-100);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .cf-filter-section__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-200) var(--space-200) 4px;
+  min-height: 28px;
+  box-sizing: border-box;
+  padding: var(--space-200) var(--space-100) var(--space-100);
 }
 
 .cf-filter-section__title {
   font: var(--font-caption-normal);
-  font-weight: 500;
-  color: var(--color-dense-300);
+  font-weight: var(--fw-medium);
+  color: var(--color-dense-900);
   letter-spacing: 0.12px;
   font-feature-settings: var(--font-feature);
 }
@@ -1876,7 +1947,7 @@ button[data-slot="button"].filters-reset:disabled {
 .cf-filter-section__title-with-icon {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-100);
   height: 16px;
 }
 
@@ -1916,26 +1987,57 @@ button[data-slot="button"].filters-reset:disabled {
   color: var(--color-congress-blue-800);
 }
 
+/* Hide section actions until header is hovered (or focused); skip on touch / no-hover */
+@media (hover: hover) and (pointer: fine) {
+  .cf-filter-section__header .cf-filter-section__action {
+    opacity: 0;
+    transition: opacity 150ms ease;
+  }
+  .cf-filter-section__header:hover .cf-filter-section__action,
+  .cf-filter-section__header:focus-within .cf-filter-section__action {
+    opacity: 1;
+  }
+}
+
 /* Filter row */
 .cf-filter-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-100);
 }
 
-/* Figma 437:11840 — group label in Available list */
+/* Available: gap between filter groups — Figma 437:11847 */
+.cf-filter-list--by-group {
+  gap: var(--space-400);
+}
+
+/* Figma 442:12689 — group block (label + rows) */
 .cf-filter-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-100);
 }
 
+/* Figma 448:13255 — horizontal rail */
 .cf-filter-group__name {
+  padding-inline: var(--space-500);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Figma 448:13252 — inner padding around group label */
+.cf-filter-group__name-pad {
+  padding: var(--space-200) var(--space-100) var(--space-100);
+  box-sizing: border-box;
+}
+
+.cf-filter-group__name-text {
   font: var(--font-caption-normal);
+  font-weight: var(--fw-medium);
   color: var(--color-dense-300);
   letter-spacing: 0.12px;
   font-feature-settings: var(--font-feature);
-  padding: var(--space-200) var(--space-200) 0 28px;
+  white-space: nowrap;
 }
 
 .cf-filter-row {
@@ -1951,7 +2053,7 @@ button[data-slot="button"].filters-reset:disabled {
 .cf-filter-row__drag {
   display: flex;
   align-items: flex-start;
-  padding: 4px 0;
+  padding: var(--space-100) 0;
   flex-shrink: 0;
   width: 16px;
   cursor: grab;
@@ -1962,6 +2064,26 @@ button[data-slot="button"].filters-reset:disabled {
 .cf-filter-row__drag--empty {
   cursor: default;
   visibility: hidden;
+}
+
+/* Added rows: drag handle only on row hover/focus (fine pointer); touch keeps it visible */
+@media (hover: hover) and (pointer: fine) {
+  .cf-filter-row:not(.cf-filter-row--available) .cf-filter-row__drag:not(.cf-filter-row__drag--empty) {
+    opacity: 0;
+    transition: opacity 150ms ease;
+  }
+  .cf-filter-row:not(.cf-filter-row--available):hover .cf-filter-row__drag:not(.cf-filter-row__drag--empty),
+  .cf-filter-row:not(.cf-filter-row--available):focus-within .cf-filter-row__drag:not(.cf-filter-row__drag--empty) {
+    opacity: 1;
+  }
+}
+
+/* Під час DnD курсор часто над іншим рядком — не показувати там ручку (перебиває :hover) */
+.cf-filter-list:has(.cf-filter-row--dragging)
+  .cf-filter-row:not(.cf-filter-row--dragging):not(.cf-filter-row--available)
+  .cf-filter-row__drag:not(.cf-filter-row__drag--empty) {
+  opacity: 0 !important;
+  pointer-events: none;
 }
 
 .cf-filter-row__info {
@@ -2053,23 +2175,75 @@ button[data-slot="button"].filters-reset:disabled {
 .cf-filter-row--dragging > * {
   visibility: hidden;
 }
+
+/* Плаваючий шар, що рухається з курсором (ручка + текст; не слот у списку) */
+.cf-filter-row-drag-layer {
+  background: var(--color-soft-100);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: var(--radius-sm);
+  box-shadow: 0px 6px 8px -6px rgba(0, 0, 0, 0.12), 0px 8px 16px -6px rgba(0, 0, 0, 0.08);
+}
+.cf-filter-row-drag-layer__inner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-200);
+  padding: var(--space-100) var(--space-200) var(--space-100) var(--space-100);
+  box-sizing: border-box;
+}
+.cf-filter-row-drag-layer__grip {
+  flex-shrink: 0;
+  width: 16px;
+  padding: var(--space-100) 0;
+  color: var(--color-dense-900);
+  line-height: 0;
+}
+.cf-filter-row-drag-layer__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.cf-filter-row-drag-layer__label {
+  font: var(--font-label-medium);
+  color: var(--color-dense-900);
+  line-height: 24px;
+  font-feature-settings: var(--font-feature);
+}
+.cf-filter-row-drag-layer__desc {
+  font: var(--font-caption-normal);
+  color: var(--color-dense-300);
+  letter-spacing: 0.12px;
+  line-height: 16px;
+  font-feature-settings: var(--font-feature);
+}
+
+/* Під час DnD плаваючий шар має pointer-events: none — курсор береться з елементів під ним.
+   Примусово «стиснута рука» для всіх нащадків html, інакше залишається стрілка ОС. */
+html.cf-filter-dnd-active,
+html.cf-filter-dnd-active * {
+  cursor: grabbing !important;
+}
+
 /* No results */
 .cf-no-results {
-  padding: var(--space-400) 0;
+  padding: var(--space-400) var(--space-500);
   text-align: center;
   font: var(--font-body-normal);
   color: var(--color-dense-200);
   font-feature-settings: var(--font-feature);
 }
 
-/* ── Footer ── */
+/* ── Footer (right column only; popover clips corner radius) ── */
 .cf-footer {
+  flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
   background: var(--color-soft-100);
   border-top: 1px solid rgba(0, 0, 0, 0.08);
   padding: var(--space-300) var(--space-400);
   display: flex;
+  align-items: center;
   justify-content: flex-end;
-  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
 
 .cf-footer__actions {
@@ -2078,54 +2252,68 @@ button[data-slot="button"].filters-reset:disabled {
   align-items: center;
 }
 
-/* Figma 437:11923 — Save-preset row: input + Save + Cancel */
+/* Preset row: поле на весь вільний простір; кнопки — hug + shrink-0 у групі */
 .cf-footer__save-row {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-200);
+  justify-content: flex-start;
+  gap: var(--space-300);
   width: 100%;
-}
-
-.cf-footer__preset-input {
-  width: 240px;
-  flex: 0 0 auto;
   min-width: 0;
-  height: 32px;
-  padding: var(--space-100) var(--space-200);
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  border-radius: var(--radius-sm);
-  background: var(--color-soft-100);
-  box-shadow: 0px 2px 4px -2px rgba(0, 0, 0, 0.12);
-  font: var(--font-body-normal);
-  color: var(--color-dense-900);
-  font-feature-settings: var(--font-feature);
-  outline: none;
-  transition: border-color 0.15s ease;
-}
-.cf-footer__preset-input::placeholder {
-  color: var(--color-dense-200);
-}
-.cf-footer__preset-input:focus {
-  border-color: var(--unit-color-accent-700);
 }
 
+.cf-footer__preset-field {
+  flex: 1 1 0%;
+  min-width: 0;
+}
+
+/* Save + Cancel: одна група, 8px між кнопками */
+.cf-footer__save-actions {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.cf-footer__save-actions > button {
+  flex-shrink: 0;
+}
+
+/* Однакова «клітинка» для Save / Cancel / Save as preset — без стрибків висоти */
 .cf-footer__btn {
-  padding: var(--space-100) var(--space-200);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-height: var(--btn-height-md);
+  height: var(--btn-height-md);
+  padding: 0 var(--space-200);
   border-radius: var(--radius-sm);
   font: var(--font-label-medium);
   font-feature-settings: var(--font-feature);
   cursor: pointer;
-  border: none;
   line-height: 24px;
   white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .cf-footer__btn--save {
+  border: none;
   background: var(--color-dense-900);
   color: var(--color-soft-100);
 }
 .cf-footer__btn--save:hover {
   background: var(--color-dense-700);
+}
+
+.cf-footer__btn--secondary {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: var(--color-soft-100);
+  color: var(--color-dense-900);
+  box-shadow: 0px 2px 4px -2px rgba(0, 0, 0, 0.12);
+}
+.cf-footer__btn--secondary:hover:not(:disabled) {
+  background: var(--color-soft-300);
+  border-color: var(--color-soft-700);
 }
 

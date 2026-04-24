@@ -210,9 +210,10 @@
   color: var(--color-dense-400);
 }
 
-/* Small size */
+/* Small size — фіксована висота ряду 32px (з border-box рамка входить у min-height) */
 .unit-textfield--sm .unit-textfield__field {
   min-height: var(--tf-height-sm);
+  height: var(--tf-height-sm);
   padding: var(--tf-padding-y-sm) var(--tf-padding-x-sm);
   border-radius: var(--unit-radius-sm, 4px);
 }
@@ -280,6 +281,7 @@
 
 .unit-textfield--sm .unit-textfield__split {
   min-height: var(--tf-height-sm);
+  height: var(--tf-height-sm);
   padding: var(--tf-padding-y-sm) var(--tf-padding-x-sm);
 }
 

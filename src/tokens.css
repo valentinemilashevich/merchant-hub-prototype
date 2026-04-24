@@ -233,7 +233,10 @@
 
   /* Textfield (Unit UI Kit — Textfield / InputBase) */
   --tf-height-md: 40px;
-  --tf-height-sm: 32px;
+  --tf-height-sm: 32px; /* small textfield — одна лінія з кнопкою medium */
+
+  /* Кнопка medium — та сама 32px висота ряду, що й .unit-textfield--sm */
+  --btn-height-md: var(--tf-height-sm);
   --tf-border-default: var(--color-soft-600);
   --tf-border-hover: var(--color-soft-700);
   --tf-border-focus: var(--color-congress-blue-700);

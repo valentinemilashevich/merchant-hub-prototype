@@ -23,8 +23,6 @@ import SearchGlyph from "./assets/icons/search.svg?react";
 import SidebarCollapseGlyph from "./assets/icons/sidebar-collapse.svg?react";
 import TaxesGlyph from "./assets/icons/taxes.svg?react";
 
-import { Button } from "@/components/ui/button";
-
 import {
   NAV_SECTIONS_V2,
   SKIP_RECENT_IDS,
@@ -61,10 +59,24 @@ function CalendarGlyph({ className }) {
 const ALL_FILTERS = [
   { id: "order-id",        label: "Order ID",         description: "By order identifier",           kind: "text",   group: "Order" },
   { id: "email",           label: "Email",            description: "By customer email address",     kind: "text",   group: "Customer" },
-  { id: "created-from",    label: "Created at from",  description: "Start of creation date range",  kind: "date",   group: "Date" },
-  { id: "created-to",      label: "Created at to",    description: "End of creation date range",    kind: "date",   group: "Date" },
-  { id: "updated-from",    label: "Updated at from",  description: "Start of update date range",    kind: "date",   group: "Date" },
-  { id: "updated-to",      label: "Updated at to",    description: "End of update date range",      kind: "date",   group: "Date" },
+  {
+    id: "created",
+    label: "Created",
+    description: "By creation date range",
+    kind: "dateRange",
+    group: "Date",
+    fromId: "created-from",
+    toId: "created-to",
+  },
+  {
+    id: "updated",
+    label: "Updated",
+    description: "By last update date range",
+    kind: "dateRange",
+    group: "Date",
+    fromId: "updated-from",
+    toId: "updated-to",
+  },
   { id: "channel",         label: "Channel",          description: "Transaction channel",            kind: "select", group: "Transaction" },
   { id: "amount",          label: "Amount",           description: "Amount in USD, EUR, GBP or other", kind: "amount", group: "Transaction" },
   { id: "currency",        label: "Currency",         description: "USD, EUR, GBP and more",        kind: "select", group: "Transaction" },
@@ -97,14 +109,40 @@ const FILTER_GROUP_ORDER = ["Order", "Date", "Transaction", "Payment", "Card", "
 /** Always on the panel / in “Added”; no toggle — drag only to reorder. */
 const LOCKED_FILTER_IDS = new Set(["order-id", "email"]);
 
-const DEFAULT_ADDED_IDS = ["order-id", "email", "created-from", "updated-from"];
+const DEFAULT_ADDED_IDS = ["order-id", "email", "created", "updated"];
+
+/** Map legacy per-endpoint ids to combined range filters (one slot each). */
+function migrateLegacyFilterIds(ids) {
+  const out = [];
+  let haveCreated = false;
+  let haveUpdated = false;
+  for (const id of ids) {
+    if (id === "created-from" || id === "created-to") {
+      if (!haveCreated) {
+        out.push("created");
+        haveCreated = true;
+      }
+      continue;
+    }
+    if (id === "updated-from" || id === "updated-to") {
+      if (!haveUpdated) {
+        out.push("updated");
+        haveUpdated = true;
+      }
+      continue;
+    }
+    out.push(id);
+  }
+  return out;
+}
 
 /** Dedupe, drop unknown ids, ensure locked filters exist (order preserved). */
 function normalizeActiveFilterIds(orderedIds) {
+  const migrated = migrateLegacyFilterIds(orderedIds);
   const known = new Set(ALL_FILTERS.map((f) => f.id));
   const seen = new Set();
   const out = [];
-  for (const id of orderedIds) {
+  for (const id of migrated) {
     if (!known.has(id) || seen.has(id)) continue;
     seen.add(id);
     out.push(id);
@@ -124,7 +162,16 @@ function normalizeActiveFilterIds(orderedIds) {
 }
 
 function emptyFilterValues() {
-  return Object.fromEntries(ALL_FILTERS.map((f) => [f.id, ""]));
+  const o = {};
+  for (const f of ALL_FILTERS) {
+    if (f.kind === "dateRange") {
+      o[f.fromId] = "";
+      o[f.toId] = "";
+    } else {
+      o[f.id] = "";
+    }
+  }
+  return o;
 }
 
 /** Run on Apply: only non-empty drafts are validated. */
@@ -150,12 +197,12 @@ const DEFAULT_PRESETS = [
   {
     id: "finances",
     label: "Finances",
-    filters: ["order-id", "amount", "currency", "status", "created-from", "updated-from"],
+    filters: ["order-id", "amount", "currency", "status", "created", "updated"],
   },
   {
     id: "data-analytics",
     label: "Data analytics",
-    filters: ["order-id", "channel", "status", "amount", "currency", "created-from"],
+    filters: ["order-id", "channel", "status", "amount", "currency", "created"],
   },
   {
     id: "customer-support",
@@ -173,15 +220,22 @@ const DEFAULT_PRESETS = [
 function DragHandleIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-      <circle cx="6" cy="4" r="1" fill="#8F8F8F" />
-      <circle cx="10" cy="4" r="1" fill="#8F8F8F" />
-      <circle cx="6" cy="8" r="1" fill="#8F8F8F" />
-      <circle cx="10" cy="8" r="1" fill="#8F8F8F" />
-      <circle cx="6" cy="12" r="1" fill="#8F8F8F" />
-      <circle cx="10" cy="12" r="1" fill="#8F8F8F" />
+      <circle cx="6" cy="4" r="1" fill="currentColor" />
+      <circle cx="10" cy="4" r="1" fill="currentColor" />
+      <circle cx="6" cy="8" r="1" fill="currentColor" />
+      <circle cx="10" cy="8" r="1" fill="currentColor" />
+      <circle cx="6" cy="12" r="1" fill="currentColor" />
+      <circle cx="10" cy="12" r="1" fill="currentColor" />
     </svg>
   );
 }
+
+/* HTML для плаваючого drag-layer (currentColor → чорний у .cf-filter-row-drag-layer__grip) */
+const FILTER_DRAG_GRIP_SVG_HTML =
+  '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+  '<circle cx="6" cy="4" r="1" fill="currentColor"/><circle cx="10" cy="4" r="1" fill="currentColor"/>' +
+  '<circle cx="6" cy="8" r="1" fill="currentColor"/><circle cx="10" cy="8" r="1" fill="currentColor"/>' +
+  '<circle cx="6" cy="12" r="1" fill="currentColor"/><circle cx="10" cy="12" r="1" fill="currentColor"/></svg>';
 
 /* ─── Toggle switch (animates before firing onChange) ─── */
 const TOGGLE_ANIM_MS = 220;
@@ -252,13 +306,28 @@ function CustomizeFiltersPopover({
   const [searchQuery, setSearchQuery] = useState("");
   const [savingPreset, setSavingPreset] = useState(false);
   const [presetName, setPresetName] = useState("");
+  const [presetNameError, setPresetNameError] = useState(null);
   const [availableSort, setAvailableSort] = useState("asc"); // "asc" | "desc"
   const [previewIds, setPreviewIds] = useState(null); // live drag preview order
   const [draggingId, setDraggingId] = useState(null); // for CSS class during render
   const dragItemId = useRef(null);
+  const dragLayerRef = useRef(null);
+  const dragOffsetRef = useRef({ x: 0, y: 0 });
+  const dragMoveCleanupRef = useRef(null);
   const popoverRef = useRef(null);
   const presetInputRef = useRef(null);
   const [positioned, setPositioned] = useState(false);
+
+  const tearDownFilterDragUi = useCallback(() => {
+    document.documentElement.classList.remove("cf-filter-dnd-active");
+    document.documentElement.style.removeProperty("cursor");
+    document.body.style.removeProperty("cursor");
+    dragMoveCleanupRef.current?.();
+    dragMoveCleanupRef.current = null;
+    const layer = dragLayerRef.current;
+    if (layer?.parentNode) layer.parentNode.removeChild(layer);
+    dragLayerRef.current = null;
+  }, []);
 
   /* Anchor to Customize; re-run when panel height / filter list / scroll changes */
   useLayoutEffect(() => {
@@ -346,6 +415,13 @@ function CustomizeFiltersPopover({
     return () => document.removeEventListener("keydown", handler);
   }, [onClose]);
 
+  useEffect(
+    () => () => {
+      tearDownFilterDragUi();
+    },
+    [tearDownFilterDragUi]
+  );
+
   /* Select a preset → load its filters (panel + popover share state) */
   const handleSelectPreset = useCallback(
     (preset) => {
@@ -388,12 +464,17 @@ function CustomizeFiltersPopover({
   /* Save as preset */
   const handleSavePreset = useCallback(() => {
     if (!savingPreset) {
+      setPresetNameError(null);
       setSavingPreset(true);
       setTimeout(() => presetInputRef.current?.focus(), 0);
       return;
     }
     const name = presetName.trim();
-    if (!name) return;
+    if (!name) {
+      setPresetNameError("Enter a preset name");
+      return;
+    }
+    setPresetNameError(null);
     const newPreset = {
       id: `personal-${Date.now()}`,
       label: name,
@@ -411,6 +492,7 @@ function CustomizeFiltersPopover({
       if (e.key === "Escape") {
         setSavingPreset(false);
         setPresetName("");
+        setPresetNameError(null);
       }
     },
     [handleSavePreset]
@@ -421,6 +503,7 @@ function CustomizeFiltersPopover({
     if (savingPreset) {
       setSavingPreset(false);
       setPresetName("");
+      setPresetNameError(null);
       return;
     }
     onClose();
@@ -438,46 +521,80 @@ function CustomizeFiltersPopover({
     return next;
   }, []);
 
-  const handleDragStart = useCallback((e, filterId) => {
-    dragItemId.current = filterId;
-    e.dataTransfer.effectAllowed = "move";
+  const handleDragStart = useCallback(
+    (e, filterId) => {
+      document.documentElement.classList.add("cf-filter-dnd-active");
+      document.documentElement.style.setProperty("cursor", "grabbing", "important");
+      document.body.style.setProperty("cursor", "grabbing", "important");
+      dragItemId.current = filterId;
+      e.dataTransfer.effectAllowed = "move";
 
-    /* Elevated ghost — clone element at its real position so browser can render it */
-    try {
-      const src = e.currentTarget;
-      const rect = src.getBoundingClientRect();
-      const ghost = src.cloneNode(true);
-      ghost.style.cssText = [
-        "position:fixed",
-        `top:${rect.top}px`,
-        `left:${rect.left}px`,
-        `width:${rect.width}px`,
-        "margin:0",
-        "background:#fff",
-        "border:1px solid rgba(0,0,0,0.12)",
-        "border-radius:4px",
-        "box-shadow:0px 6px 8px -6px rgba(0,0,0,0.12),0px 8px 16px -6px rgba(0,0,0,0.08)",
-        "pointer-events:none",
-        "z-index:-1",
-      ].join(";");
-      document.body.appendChild(ghost);
-      e.dataTransfer.setDragImage(ghost, e.clientX - rect.left, e.clientY - rect.top);
-      requestAnimationFrame(() => {
-        if (document.body.contains(ghost)) document.body.removeChild(ghost);
+      const row = e.currentTarget;
+      const rect = row.getBoundingClientRect();
+      const label = row.querySelector(".cf-filter-row__label")?.textContent?.trim() ?? "";
+      const desc = row.querySelector(".cf-filter-row__desc")?.textContent?.trim() ?? "";
+
+      const layer = document.createElement("div");
+      layer.className = "cf-filter-row-drag-layer";
+      layer.setAttribute("role", "presentation");
+      layer.innerHTML = [
+        '<div class="cf-filter-row-drag-layer__inner">',
+        `<div class="cf-filter-row-drag-layer__grip" aria-hidden="true">${FILTER_DRAG_GRIP_SVG_HTML}</div>`,
+        '<div class="cf-filter-row-drag-layer__text">',
+        '<span class="cf-filter-row-drag-layer__label"></span>',
+        '<span class="cf-filter-row-drag-layer__desc"></span>',
+        "</div></div>",
+      ].join("");
+      layer.querySelector(".cf-filter-row-drag-layer__label").textContent = label;
+      layer.querySelector(".cf-filter-row-drag-layer__desc").textContent = desc;
+
+      const ox = e.clientX - rect.left;
+      const oy = e.clientY - rect.top;
+      dragOffsetRef.current = { x: ox, y: oy };
+      Object.assign(layer.style, {
+        position: "fixed",
+        left: `${e.clientX - ox}px`,
+        top: `${e.clientY - oy}px`,
+        width: `${rect.width}px`,
+        zIndex: "10050",
+        pointerEvents: "none",
+        boxSizing: "border-box",
       });
-    } catch { /* fallback to browser default ghost */ }
+      document.body.appendChild(layer);
+      dragLayerRef.current = layer;
 
-    setDraggingId(filterId);
-    // kick off preview with current order
-    setPreviewIds((prev) => prev ?? [...activeFilterIds]);
-  }, [activeFilterIds]);
+      const hide = new Image();
+      hide.src =
+        "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+      try {
+        e.dataTransfer.setDragImage(hide, 0, 0);
+      } catch {
+        /* ignore */
+      }
+
+      const onDrag = (ev) => {
+        const el = dragLayerRef.current;
+        if (!el) return;
+        if (ev.clientX === 0 && ev.clientY === 0) return;
+        el.style.left = `${ev.clientX - dragOffsetRef.current.x}px`;
+        el.style.top = `${ev.clientY - dragOffsetRef.current.y}px`;
+      };
+      row.addEventListener("drag", onDrag);
+      dragMoveCleanupRef.current = () => row.removeEventListener("drag", onDrag);
+
+      setDraggingId(filterId);
+      setPreviewIds((prev) => prev ?? [...activeFilterIds]);
+    },
+    [activeFilterIds]
+  );
 
   const handleDragEnd = useCallback(() => {
+    tearDownFilterDragUi();
     onActiveFilterIdsChange((prev) => previewIds ?? prev);
     dragItemId.current = null;
     setDraggingId(null);
     setPreviewIds(null);
-  }, [previewIds, onActiveFilterIdsChange]);
+  }, [previewIds, onActiveFilterIdsChange, tearDownFilterDragUi]);
 
   const handleDragOver = useCallback(
     (e, filterId) => {
@@ -557,9 +674,8 @@ function CustomizeFiltersPopover({
 
   return (
     <div className={`cf-popover${positioned ? " cf-popover--visible" : ""}`} ref={popoverRef}>
-      {/* ── Content area ── */}
-      <div className="cf-body">
-        {/* ── Left: Presets ── */}
+      <div className="cf-popover__main">
+        {/* ── Left: Presets + divider (full modal height) ── */}
         <div className="cf-presets">
           <div className="cf-presets-inner">
             {/* Default presets */}
@@ -629,160 +745,237 @@ function CustomizeFiltersPopover({
           </div>
         </div>
 
-        {/* ── Right: Filters ── */}
-        <div className="cf-filters">
-          {/* Sticky header with gradient fade */}
-          <div className="cf-filters-header">
-            <div className="cf-filters-header__content">
-              <div className="cf-filters-heading">
-                <span className="cf-filters-heading__text">Filters</span>
-              </div>
-              <div className="cf-filters-search">
-                <div className="cf-filters-search__icon">
-                  <SideIcon icon={SearchGlyph} />
-                </div>
-                <input
-                  className="cf-filters-search__input"
-                  type="text"
-                  placeholder="Search filter"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  autoComplete="off"
-                  spellCheck={false}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="cf-filters-scroll">
-            {/* Added section */}
-            {filteredAdded.length > 0 && (
-              <div className="cf-filter-section">
-                <div className="cf-filter-section__header">
-                  <span className="cf-filter-section__title">Added</span>
-                  <button
-                    type="button"
-                    className="cf-filter-section__action"
-                    onClick={clearAll}
-                  >
-                    Clear all
-                  </button>
-                </div>
-                <div className="cf-filter-list">
-                  {filteredAdded.map((f) => (
-                    <div
-                      key={f.id}
-                      className={`cf-filter-row${draggingId === f.id ? " cf-filter-row--dragging" : ""}`}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, f.id)}
-                      onDragEnd={handleDragEnd}
-                      onDragOver={(e) => handleDragOver(e, f.id)}
-                      onDrop={(e) => handleDrop(e, f.id)}
-                    >
-                      <div className="cf-filter-row__drag">
-                        <DragHandleIcon />
-                      </div>
-                      <div className="cf-filter-row__info">
-                        <span className="cf-filter-row__label">{f.label}</span>
-                        <span className="cf-filter-row__desc">{f.description}</span>
-                      </div>
-                      {LOCKED_FILTER_IDS.has(f.id) ? (
-                        <div className="cf-filter-row__toggle-slot" aria-hidden />
-                      ) : (
-                        <ToggleSwitch checked={true} onChange={() => toggleFilter(f.id)} />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Available section */}
-            {filteredAvailable.length > 0 && (
-              <div className="cf-filter-section">
-                <div className="cf-filter-section__header">
-                  <div className="cf-filter-section__title-with-icon">
-                    <span className="cf-filter-section__title">Available</span>
-                    <button
-                      type="button"
-                      className={`cf-filter-section__sort-btn${availableSort === "desc" ? " cf-filter-section__sort-btn--desc" : ""}`}
-                      onClick={toggleSort}
-                      aria-label={availableSort === "asc" ? "Sort Z to A" : "Sort A to Z"}
-                    >
-                      <ArrowDownIcon />
-                    </button>
+        {/* ── Right: Filters column (header + list) + footer ── */}
+        <div className="cf-filters-wrap">
+          <div className="cf-filters">
+            <div className="cf-filters-stack">
+              {/* Sticky header with gradient fade */}
+              <div className="cf-filters-header">
+                <div className="cf-filters-header__content">
+                  <div className="cf-filters-heading">
+                    <span className="cf-filters-heading__text">Filters</span>
                   </div>
-                  <button
-                    type="button"
-                    className="cf-filter-section__action"
-                    onClick={selectAll}
+                  <div
+                    className={[
+                      "unit-textfield",
+                      "unit-textfield--sm",
+                      "filters-search-unit",
+                      "cf-filters-search",
+                    ].join(" ")}
                   >
-                    Select all
-                  </button>
+                    <div className="unit-textfield__outline">
+                      <div className="unit-textfield__field">
+                        <SideIcon icon={SearchGlyph} />
+                        <input
+                          type="search"
+                          placeholder="Search filter"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          autoComplete="off"
+                          spellCheck={false}
+                          aria-label="Search filter"
+                        />
+                        {searchQuery ? (
+                          <button
+                            type="button"
+                            className="filters-search-clear"
+                            aria-label="Clear search filter"
+                            onClick={() => setSearchQuery("")}
+                          >
+                            ×
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="cf-filter-list">
-                  {groupedAvailable.map((g) => (
-                    <div key={g.group} className="cf-filter-group">
-                      <div className="cf-filter-group__name">{g.group}</div>
-                      {g.items.map((f) => (
-                        <div key={f.id} className="cf-filter-row cf-filter-row--available">
-                          <div className="cf-filter-row__drag cf-filter-row__drag--empty" />
+              </div>
+
+              <div className="cf-filters-scroll">
+                {/* Added section */}
+                {filteredAdded.length > 0 && (
+                  <div className="cf-filter-section">
+                    <div className="cf-filter-section__header-rail">
+                      <div className="cf-filter-section__header">
+                        <span className="cf-filter-section__title">Added</span>
+                        <button
+                          type="button"
+                          className="cf-filter-section__action"
+                          onClick={clearAll}
+                        >
+                          Clear all
+                        </button>
+                      </div>
+                    </div>
+                    <div className="cf-filter-list">
+                      {filteredAdded.map((f) => (
+                        <div
+                          key={f.id}
+                          className={`cf-filter-row${draggingId === f.id ? " cf-filter-row--dragging" : ""}`}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, f.id)}
+                          onDragEnd={handleDragEnd}
+                          onDragOver={(e) => handleDragOver(e, f.id)}
+                          onDrop={(e) => handleDrop(e, f.id)}
+                        >
+                          <div
+                            className="cf-filter-row__drag"
+                            onMouseDown={(ev) => {
+                              if (ev.button !== 0) return;
+                              document.documentElement.classList.add("cf-filter-dnd-active");
+                              document.documentElement.style.setProperty("cursor", "grabbing", "important");
+                              document.body.style.setProperty("cursor", "grabbing", "important");
+                              const onUp = () => {
+                                window.removeEventListener("mouseup", onUp);
+                                queueMicrotask(() => {
+                                  if (dragItemId.current == null) {
+                                    document.documentElement.classList.remove("cf-filter-dnd-active");
+                                    document.documentElement.style.removeProperty("cursor");
+                                    document.body.style.removeProperty("cursor");
+                                  }
+                                });
+                              };
+                              window.addEventListener("mouseup", onUp, { once: true });
+                            }}
+                          >
+                            <DragHandleIcon />
+                          </div>
                           <div className="cf-filter-row__info">
                             <span className="cf-filter-row__label">{f.label}</span>
                             <span className="cf-filter-row__desc">{f.description}</span>
                           </div>
-                          <ToggleSwitch
-                            checked={false}
-                            onChange={() => toggleFilter(f.id)}
-                          />
+                          {LOCKED_FILTER_IDS.has(f.id) ? (
+                            <div className="cf-filter-row__toggle-slot" aria-hidden />
+                          ) : (
+                            <ToggleSwitch checked={true} onChange={() => toggleFilter(f.id)} />
+                          )}
                         </div>
                       ))}
                     </div>
-                  ))}
+                  </div>
+                )}
+
+                {/* Available section */}
+                {filteredAvailable.length > 0 && (
+                  <div className="cf-filter-section">
+                    <div className="cf-filter-section__header-rail">
+                      <div className="cf-filter-section__header">
+                        <div className="cf-filter-section__title-with-icon">
+                          <span className="cf-filter-section__title">Available</span>
+                          <button
+                            type="button"
+                            className={`cf-filter-section__sort-btn${availableSort === "desc" ? " cf-filter-section__sort-btn--desc" : ""}`}
+                            onClick={toggleSort}
+                            aria-label={availableSort === "asc" ? "Sort Z to A" : "Sort A to Z"}
+                          >
+                            <ArrowDownIcon />
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          className="cf-filter-section__action"
+                          onClick={selectAll}
+                        >
+                          Select all
+                        </button>
+                      </div>
+                    </div>
+                    <div className="cf-filter-list cf-filter-list--by-group">
+                      {groupedAvailable.map((g) => (
+                        <div key={g.group} className="cf-filter-group">
+                          <div className="cf-filter-group__name">
+                            <div className="cf-filter-group__name-pad">
+                              <span className="cf-filter-group__name-text">{g.group}</span>
+                            </div>
+                          </div>
+                          {g.items.map((f) => (
+                            <div key={f.id} className="cf-filter-row cf-filter-row--available">
+                              <div className="cf-filter-row__drag cf-filter-row__drag--empty" />
+                              <div className="cf-filter-row__info">
+                                <span className="cf-filter-row__label">{f.label}</span>
+                                <span className="cf-filter-row__desc">{f.description}</span>
+                              </div>
+                              <ToggleSwitch
+                                checked={false}
+                                onChange={() => toggleFilter(f.id)}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* No results */}
+                {filteredAdded.length === 0 && filteredAvailable.length === 0 && q && (
+                  <div className="cf-no-results">No filters found</div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="cf-footer">
+            {savingPreset ? (
+              <div className="cf-footer__save-row">
+                <div
+                  className={[
+                    "unit-textfield",
+                    "unit-textfield--sm",
+                    "filters-search-unit",
+                    "cf-footer__preset-field",
+                    presetNameError ? "unit-textfield--error" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                >
+                  <div className="unit-textfield__outline">
+                    <div className="unit-textfield__field">
+                      <input
+                        ref={presetInputRef}
+                        type="text"
+                        placeholder="Preset name"
+                        value={presetName}
+                        onChange={(e) => {
+                          setPresetNameError(null);
+                          setPresetName(e.target.value);
+                        }}
+                        onKeyDown={handlePresetKeyDown}
+                        aria-label="Preset name"
+                        aria-invalid={presetNameError ? true : undefined}
+                      />
+                    </div>
+                  </div>
+                  {presetNameError ? (
+                    <div className="unit-textfield__helper-wrapper">
+                      <span className="unit-textfield__helper" role="alert">
+                        {presetNameError}
+                      </span>
+                    </div>
+                  ) : null}
+                </div>
+                <div
+                  className="cf-footer__save-actions"
+                  role="group"
+                  aria-label="Save preset"
+                >
+                  <button type="button" className="cf-footer__btn cf-footer__btn--secondary" onClick={handleCancel}>
+                    Cancel
+                  </button>
+                  <button type="button" className="cf-footer__btn cf-footer__btn--save" onClick={handleSavePreset}>
+                    Save
+                  </button>
                 </div>
               </div>
-            )}
-
-            {/* No results */}
-            {filteredAdded.length === 0 && filteredAvailable.length === 0 && q && (
-              <div className="cf-no-results">No filters found</div>
+            ) : (
+              <div className="cf-footer__actions">
+                <button type="button" className="cf-footer__btn cf-footer__btn--save" onClick={handleSavePreset}>
+                  Save as preset
+                </button>
+              </div>
             )}
           </div>
         </div>
-      </div>
-
-      {/* ── Footer ── */}
-      <div className="cf-footer">
-        {savingPreset ? (
-          <div className="cf-footer__save-row">
-            <input
-              ref={presetInputRef}
-              className="cf-footer__preset-input"
-              type="text"
-              placeholder="Preset name"
-              value={presetName}
-              onChange={(e) => setPresetName(e.target.value)}
-              onKeyDown={handlePresetKeyDown}
-            />
-            <button type="button" className="cf-footer__btn cf-footer__btn--save" onClick={handleSavePreset}>
-              Save
-            </button>
-            <Button
-              type="button"
-              variant="secondary"
-              className="filters-reset"
-              onClick={handleCancel}
-            >
-              Cancel
-            </Button>
-          </div>
-        ) : (
-          <div className="cf-footer__actions">
-            <button type="button" className="cf-footer__btn cf-footer__btn--save" onClick={handleSavePreset}>
-              Save as preset
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -966,7 +1159,17 @@ export default function App() {
   const filterToolbarBadgeCount = useMemo(() => {
     let n = 0;
     for (const id of activePanelFilterIds) {
-      if ((filterAppliedValues[id] ?? "").trim()) n += 1;
+      const f = ALL_FILTERS.find((x) => x.id === id);
+      if (f?.kind === "dateRange") {
+        if (
+          (filterAppliedValues[f.fromId] ?? "").trim() ||
+          (filterAppliedValues[f.toId] ?? "").trim()
+        ) {
+          n += 1;
+        }
+      } else if ((filterAppliedValues[id] ?? "").trim()) {
+        n += 1;
+      }
     }
     if (appliedFiltersSearch.trim()) n += 1;
     return n;
@@ -1487,6 +1690,7 @@ export default function App() {
                     className={[
                       "unit-textfield",
                       "unit-textfield--sm",
+                      "filters-search-unit",
                       toolbarSearchError ? "unit-textfield--error" : "",
                     ]
                       .filter(Boolean)
@@ -1511,7 +1715,7 @@ export default function App() {
                         {filtersSearch ? (
                           <button
                             type="button"
-                            className="filters-toolbar-search-clear"
+                            className="filters-search-clear"
                             aria-label="Clear search"
                             onClick={() => {
                               setToolbarSearchError(null);
@@ -1558,10 +1762,19 @@ export default function App() {
                     .map((id) => ALL_FILTERS.find((x) => x.id === id))
                     .filter(Boolean)
                     .map((f) => {
-                      const err = filterFieldErrors[f.id];
+                      const isDateRange = f.kind === "dateRange";
+                      const err = isDateRange
+                        ? filterFieldErrors[f.fromId] || filterFieldErrors[f.toId]
+                        : filterFieldErrors[f.id];
                       const disabledField = f.id === "descriptor";
+                      const dateField = { kind: "date" };
                       return (
-                        <div key={f.id} className="filters-field">
+                        <div
+                          key={f.id}
+                          className={["filters-field", isDateRange ? "filters-field--date-range" : ""]
+                            .filter(Boolean)
+                            .join(" ")}
+                        >
                           <div
                             className={[
                               "unit-textfield",
@@ -1576,20 +1789,53 @@ export default function App() {
                               <div className="unit-textfield__label">{f.label}</div>
                             </div>
                             <div className="unit-textfield__outline">
-                              <div
-                                className={
-                                  f.kind === "amount"
-                                    ? "unit-textfield__field unit-textfield__field--split"
-                                    : "unit-textfield__field"
-                                }
-                              >
-                                {renderFilterInput(f, {
-                                  value: filterDraftValues[f.id] ?? "",
-                                  onChange: (e) => setFilterDraft(f.id, e.target.value),
-                                  disabled: disabledField,
-                                  invalid: Boolean(err),
-                                })}
-                              </div>
+                              {isDateRange ? (
+                                <div className="filters-date-range-stack">
+                                  <div className="filters-date-range-line">
+                                    <span className="filters-date-range-hint">From</span>
+                                    <div className="unit-textfield__field">
+                                      {renderFilterInput(
+                                        { ...dateField, label: `${f.label}, from` },
+                                        {
+                                          value: filterDraftValues[f.fromId] ?? "",
+                                          onChange: (e) => setFilterDraft(f.fromId, e.target.value),
+                                          disabled: disabledField,
+                                          invalid: Boolean(filterFieldErrors[f.fromId]),
+                                        }
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="filters-date-range-line">
+                                    <span className="filters-date-range-hint">To</span>
+                                    <div className="unit-textfield__field">
+                                      {renderFilterInput(
+                                        { ...dateField, label: `${f.label}, to` },
+                                        {
+                                          value: filterDraftValues[f.toId] ?? "",
+                                          onChange: (e) => setFilterDraft(f.toId, e.target.value),
+                                          disabled: disabledField,
+                                          invalid: Boolean(filterFieldErrors[f.toId]),
+                                        }
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div
+                                  className={
+                                    f.kind === "amount"
+                                      ? "unit-textfield__field unit-textfield__field--split"
+                                      : "unit-textfield__field"
+                                  }
+                                >
+                                  {renderFilterInput(f, {
+                                    value: filterDraftValues[f.id] ?? "",
+                                    onChange: (e) => setFilterDraft(f.id, e.target.value),
+                                    disabled: disabledField,
+                                    invalid: Boolean(err),
+                                  })}
+                                </div>
+                              )}
                             </div>
                             {err ? (
                               <div className="unit-textfield__helper-wrapper">
@@ -1608,7 +1854,9 @@ export default function App() {
                   <button
                     ref={customizeBtnRef}
                     type="button"
-                    className="filters-customize-link"
+                    className={`filters-customize-link${customizeOpen ? " is-active" : ""}`}
+                    aria-expanded={customizeOpen}
+                    aria-haspopup="dialog"
                     onClick={() => setCustomizeOpen((v) => !v)}
                   >
                     <SideIcon icon={SettingsCustomizeGlyph} />
@@ -1616,7 +1864,7 @@ export default function App() {
                   </button>
                   <div className="filters-panel-footer-actions">
                     <button type="button" className="filters-reset" onClick={handleResetFilters}>
-                      Reset all
+                      Reset
                     </button>
                     <button type="button" className="filters-apply" onClick={handleApplyFilters}>
                       Apply
