@@ -524,8 +524,8 @@ function CustomizeFiltersPopover({
   const handleDragStart = useCallback(
     (e, filterId) => {
       document.documentElement.classList.add("cf-filter-dnd-active");
-      document.documentElement.style.setProperty("cursor", "grabbing", "important");
-      document.body.style.setProperty("cursor", "grabbing", "important");
+      document.documentElement.style.setProperty("cursor", "none", "important");
+      document.body.style.setProperty("cursor", "none", "important");
       dragItemId.current = filterId;
       e.dataTransfer.effectAllowed = "move";
 
@@ -559,6 +559,8 @@ function CustomizeFiltersPopover({
         zIndex: "10050",
         pointerEvents: "none",
         boxSizing: "border-box",
+        "--cf-drag-cursor-x": `${ox}px`,
+        "--cf-drag-cursor-y": `${oy}px`,
       });
       document.body.appendChild(layer);
       dragLayerRef.current = layer;
@@ -681,7 +683,7 @@ function CustomizeFiltersPopover({
             {/* Default presets */}
             <div className="cf-preset-group">
               <div className="cf-preset-heading">
-                <span className="cf-preset-heading__text">Presets</span>
+                <span className="cf-preset-heading__text cf-preset-heading__text--default">Presets</span>
               </div>
               <div className="cf-preset-list">
                 {DEFAULT_PRESETS.map((p) => (
@@ -822,14 +824,12 @@ function CustomizeFiltersPopover({
                             className="cf-filter-row__drag"
                             onMouseDown={(ev) => {
                               if (ev.button !== 0) return;
-                              document.documentElement.classList.add("cf-filter-dnd-active");
                               document.documentElement.style.setProperty("cursor", "grabbing", "important");
                               document.body.style.setProperty("cursor", "grabbing", "important");
                               const onUp = () => {
                                 window.removeEventListener("mouseup", onUp);
                                 queueMicrotask(() => {
                                   if (dragItemId.current == null) {
-                                    document.documentElement.classList.remove("cf-filter-dnd-active");
                                     document.documentElement.style.removeProperty("cursor");
                                     document.body.style.removeProperty("cursor");
                                   }
@@ -857,7 +857,7 @@ function CustomizeFiltersPopover({
 
                 {/* Available section */}
                 {filteredAvailable.length > 0 && (
-                  <div className="cf-filter-section">
+                  <div className="cf-filter-section cf-filter-section--available">
                     <div className="cf-filter-section__header-rail">
                       <div className="cf-filter-section__header">
                         <div className="cf-filter-section__title-with-icon">
@@ -1767,14 +1767,14 @@ export default function App() {
                         ? filterFieldErrors[f.fromId] || filterFieldErrors[f.toId]
                         : filterFieldErrors[f.id];
                       const disabledField = f.id === "descriptor";
-                      const dateField = { kind: "date" };
-                      return (
-                        <div
-                          key={f.id}
-                          className={["filters-field", isDateRange ? "filters-field--date-range" : ""]
+                      const rangeValue = isDateRange
+                        ? [filterDraftValues[f.fromId], filterDraftValues[f.toId]]
+                            .map((v) => (v ?? "").trim())
                             .filter(Boolean)
-                            .join(" ")}
-                        >
+                            .join(" - ")
+                        : "";
+                      return (
+                        <div key={f.id} className="filters-field">
                           <div
                             className={[
                               "unit-textfield",
@@ -1789,53 +1789,35 @@ export default function App() {
                               <div className="unit-textfield__label">{f.label}</div>
                             </div>
                             <div className="unit-textfield__outline">
-                              {isDateRange ? (
-                                <div className="filters-date-range-stack">
-                                  <div className="filters-date-range-line">
-                                    <span className="filters-date-range-hint">From</span>
-                                    <div className="unit-textfield__field">
-                                      {renderFilterInput(
-                                        { ...dateField, label: `${f.label}, from` },
-                                        {
-                                          value: filterDraftValues[f.fromId] ?? "",
-                                          onChange: (e) => setFilterDraft(f.fromId, e.target.value),
-                                          disabled: disabledField,
-                                          invalid: Boolean(filterFieldErrors[f.fromId]),
-                                        }
-                                      )}
-                                    </div>
-                                  </div>
-                                  <div className="filters-date-range-line">
-                                    <span className="filters-date-range-hint">To</span>
-                                    <div className="unit-textfield__field">
-                                      {renderFilterInput(
-                                        { ...dateField, label: `${f.label}, to` },
-                                        {
-                                          value: filterDraftValues[f.toId] ?? "",
-                                          onChange: (e) => setFilterDraft(f.toId, e.target.value),
-                                          disabled: disabledField,
-                                          invalid: Boolean(filterFieldErrors[f.toId]),
-                                        }
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              ) : (
-                                <div
-                                  className={
-                                    f.kind === "amount"
-                                      ? "unit-textfield__field unit-textfield__field--split"
-                                      : "unit-textfield__field"
-                                  }
-                                >
-                                  {renderFilterInput(f, {
+                              <div
+                                className={
+                                  f.kind === "amount"
+                                    ? "unit-textfield__field unit-textfield__field--split"
+                                    : "unit-textfield__field"
+                                }
+                              >
+                                {isDateRange ? (
+                                  <>
+                                    <CalendarGlyph className="icon" />
+                                    <input
+                                      type="text"
+                                      readOnly
+                                      placeholder="Select date"
+                                      aria-label={f.label}
+                                      value={rangeValue}
+                                      disabled={Boolean(disabledField)}
+                                      aria-invalid={err ? true : undefined}
+                                    />
+                                  </>
+                                ) : (
+                                  renderFilterInput(f, {
                                     value: filterDraftValues[f.id] ?? "",
                                     onChange: (e) => setFilterDraft(f.id, e.target.value),
                                     disabled: disabledField,
                                     invalid: Boolean(err),
-                                  })}
-                                </div>
-                              )}
+                                  })
+                                )}
+                              </div>
                             </div>
                             {err ? (
                               <div className="unit-textfield__helper-wrapper">
