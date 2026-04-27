@@ -1292,6 +1292,10 @@ html,
   align-items: center;
 }
 
+.filters-field .unit-textfield--active .unit-textfield__field {
+  border-color: var(--unit-color-accent-700);
+}
+
 .filters-field .unit-textfield__field--split {
   height: var(--tf-height-sm);
   min-height: var(--tf-height-sm);
@@ -1372,6 +1376,499 @@ html,
   flex-direction: row;
   gap: var(--space-200);
   align-items: center;
+}
+
+/* ═════════════════════════════════════════════
+   Date Filter Popover
+   Figma: Filters → Calendar update / Between
+   ═════════════════════════════════════════════ */
+
+.df-popover {
+  position: fixed;
+  z-index: 620;
+  width: 748px;
+  height: 512px;
+  background: var(--color-soft-100);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: var(--radius-lg);
+  box-shadow: 0px 6px 8px -6px rgba(0, 0, 0, 0.12), 0px 8px 16px -6px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+.df-popover--visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.df-popover__main {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  height: 100%;
+}
+
+.df-presets {
+  width: 180px;
+  flex-shrink: 0;
+  background: var(--color-soft-100);
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
+  padding: var(--space-400);
+  box-sizing: border-box;
+}
+
+.df-preset-heading {
+  display: flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 var(--space-200);
+  font: var(--font-caption-normal);
+  font-weight: var(--fw-medium);
+  color: var(--color-dense-900);
+  letter-spacing: 0.12px;
+  font-feature-settings: var(--font-feature);
+  box-sizing: border-box;
+}
+
+.df-preset-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-100);
+  margin-top: var(--space-200);
+}
+
+.df-preset-item {
+  width: 100%;
+  min-height: 32px;
+  padding: var(--space-100) var(--space-200);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-dense-900);
+  font: var(--font-label-medium);
+  text-align: left;
+  cursor: pointer;
+  font-feature-settings: var(--font-feature);
+  box-sizing: border-box;
+}
+
+.df-preset-item:hover,
+.df-preset-item.is-selected {
+  background: var(--color-soft-300);
+}
+
+.df-calendar {
+  /* 748px popover − 180px presets (Figma column) */
+  flex: 0 0 568px;
+  width: 568px;
+  min-width: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-soft-100);
+}
+
+.df-calendar__body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-600);
+  padding-bottom: 0;
+  box-sizing: border-box;
+}
+
+/* Figma 455:16999 — months + date fields: vertical gap 16px; height hugs content */
+.df-calendar__stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-400);
+  flex: 0 0 auto;
+  align-self: stretch;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.df-mode {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-200);
+  padding: var(--space-400) var(--space-500) 0;
+  box-sizing: border-box;
+}
+
+.df-mode__label {
+  display: flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 var(--space-100);
+  font: var(--font-caption-normal);
+  font-weight: var(--fw-medium);
+  color: var(--color-dense-900);
+  letter-spacing: 0.12px;
+  font-feature-settings: var(--font-feature);
+}
+
+.df-mode__group {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  width: 100%;
+  height: 32px;
+  border: 1px solid var(--color-soft-600);
+  border-radius: var(--radius-sm);
+  background: var(--color-soft-100);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.df-mode__btn {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+  padding: var(--space-100) var(--space-200);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-dense-900);
+  font: var(--font-label-medium);
+  cursor: pointer;
+  font-feature-settings: var(--font-feature);
+}
+
+.df-mode__btn.is-selected {
+  background: var(--unit-color-accent-200);
+  box-shadow: inset 0 0 0 2px var(--unit-color-accent-700);
+}
+
+.df-months {
+  display: flex;
+  gap: var(--space-400);
+  padding: 0 var(--space-500);
+  box-sizing: border-box;
+}
+
+.df-month {
+  width: 252px;
+  flex-shrink: 0;
+}
+
+.df-month__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 24px;
+  padding: 0 var(--space-200);
+  box-sizing: border-box;
+}
+
+.df-month__title {
+  font: var(--font-label-medium);
+  color: var(--color-dense-900);
+  font-feature-settings: var(--font-feature);
+  white-space: nowrap;
+}
+
+.df-month__nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-dense-900);
+  font: var(--font-label-medium);
+  cursor: pointer;
+}
+
+.df-month__nav:hover {
+  background: var(--color-soft-300);
+}
+
+.df-month__nav .icon {
+  color: inherit;
+}
+
+.df-month__nav--next .icon {
+  transform: rotate(180deg);
+}
+
+.df-days {
+  display: flex;
+  flex-wrap: wrap;
+  width: 252px;
+  margin-top: var(--space-200);
+}
+
+.df-day {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: var(--color-soft-100);
+  color: var(--color-dense-900);
+  font: var(--font-label-medium);
+  letter-spacing: -0.14px;
+  cursor: pointer;
+  font-feature-settings: "case" 1;
+}
+
+.df-day:hover {
+  background: var(--color-soft-300);
+}
+
+.df-day--outside {
+  color: var(--color-soft-800);
+}
+
+.df-day--range {
+  background: var(--unit-color-accent-100);
+}
+
+.df-day--selected {
+  background: var(--unit-color-accent-300);
+  color: var(--color-dense-900);
+}
+
+.df-date-fields {
+  display: flex;
+  align-items: flex-end;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0 var(--space-500) var(--space-500);
+}
+
+.df-date-fields--single {
+  gap: var(--space-400);
+  align-items: stretch;
+}
+
+.df-date-fields--single > .df-date-field {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.df-date-fields--range {
+  gap: var(--space-400);
+}
+
+.df-date-fields--range > .df-date-field-group {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.df-date-fields--after,
+.df-date-fields--before {
+  align-items: flex-start;
+}
+
+.df-date-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-200);
+  min-width: 0;
+}
+
+.df-date-field-group--fixed {
+  width: 252px;
+  max-width: 100%;
+  flex: 0 0 auto;
+}
+
+.df-date-field__inline {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-200);
+  width: 100%;
+  min-width: 0;
+}
+
+.df-date-field__value--flex {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.df-date-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-200);
+  min-width: 0;
+}
+
+.df-date-field__label {
+  display: flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 var(--space-100);
+  box-sizing: border-box;
+  font: var(--font-caption-normal);
+  font-weight: var(--fw-medium);
+  color: var(--color-dense-300);
+  letter-spacing: 0.12px;
+  font-feature-settings: var(--font-feature);
+}
+
+/* Date / Time textfield surface (Figma 455:16759 / 17118 / 17718 / 18124) */
+.df-date-field__value,
+.df-time-field {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--tf-height-sm);
+  border: 1px solid var(--color-soft-600);
+  border-radius: var(--radius-md);
+  background: var(--color-soft-100);
+  color: var(--color-dense-900);
+  font: var(--font-label-medium);
+  font-feature-settings: var(--font-feature);
+  box-sizing: border-box;
+  padding: var(--tf-padding-y-sm) var(--tf-padding-x-sm);
+  overflow: visible;
+  cursor: text;
+}
+
+.df-time-field {
+  width: 73px;
+  flex: 0 0 73px;
+  color: var(--color-dense-200);
+}
+
+.df-time-field--fill {
+  width: 100%;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* Do not shrink below segment widths — was collapsing to “/ /” and “: :” in Single */
+.df-date-field__value > .df-seg-date,
+.df-time-field > .df-seg-time {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: max-content;
+  max-width: 100%;
+}
+
+.df-date-fields--single > .df-date-field > .df-date-field__value,
+.df-date-fields--single > .df-date-field > .df-time-field.df-time-field--fill {
+  width: 100%;
+  align-self: stretch;
+}
+
+/* Date segments — Medium 500 digits, light "/" separators */
+.df-seg-date {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.df-seg-date__inp {
+  border: none;
+  background: transparent;
+  margin: 0;
+  padding: 0;
+  font: var(--font-label-medium);
+  color: var(--color-dense-900);
+  text-align: center;
+  outline: none;
+  box-sizing: border-box;
+  line-height: var(--lh-300);
+  font-feature-settings: var(--font-feature);
+}
+
+.df-seg-date__inp--dd,
+.df-seg-date__inp--mm {
+  width: 22px;
+  min-width: 22px;
+  flex: 0 0 22px;
+}
+
+.df-seg-date__inp--yyyy {
+  width: 40px;
+  min-width: 40px;
+  flex: 0 0 40px;
+}
+
+.df-seg-date__inp::placeholder {
+  color: var(--color-soft-800);
+  font-weight: 400;
+}
+
+.df-seg-date__sep {
+  width: 8px;
+  flex: 0 0 8px;
+  text-align: center;
+  font: var(--font-body-normal);
+  color: var(--color-soft-800);
+  line-height: var(--lh-300);
+  user-select: none;
+  pointer-events: none;
+}
+
+/* Time segments — Regular 400 digits, color dense-200 (#8f8f8f) */
+.df-seg-time {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.df-seg-time__inp {
+  border: none;
+  background: transparent;
+  width: 22px;
+  min-width: 22px;
+  flex: 0 0 22px;
+  margin: 0;
+  padding: 0;
+  font: var(--font-body-normal);
+  color: var(--color-dense-200);
+  text-align: center;
+  outline: none;
+  box-sizing: border-box;
+  line-height: var(--lh-300);
+  font-feature-settings: var(--font-feature);
+}
+
+.df-seg-time__inp::placeholder {
+  color: var(--color-dense-200);
+}
+
+.df-seg-time__sep {
+  width: 4px;
+  flex: 0 0 4px;
+  text-align: center;
+  font: var(--font-body-normal);
+  color: var(--color-dense-200);
+  line-height: var(--lh-300);
+  user-select: none;
+  pointer-events: none;
+}
+
+.df-footer {
+  flex-shrink: 0;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-200);
+  padding: var(--space-300) var(--space-400);
+  box-sizing: border-box;
 }
 
 .filters-customize {
@@ -2193,20 +2690,6 @@ button[data-slot="button"].filters-reset:disabled {
   border-radius: var(--radius-sm);
   box-shadow: 0px 6px 8px -6px rgba(0, 0, 0, 0.12), 0px 8px 16px -6px rgba(0, 0, 0, 0.08);
 }
-.cf-filter-row-drag-layer::after {
-  content: "";
-  position: absolute;
-  left: var(--cf-drag-cursor-x, 0px);
-  top: var(--cf-drag-cursor-y, 0px);
-  width: 24px;
-  height: 24px;
-  transform: translate(-8px, -8px);
-  background-image: url("data:image/svg+xml,%3Csvg width='24' height='24' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8.25 11.2V6.75a1.25 1.25 0 1 1 2.5 0V11h.75V5.75a1.25 1.25 0 1 1 2.5 0V11h.75V7.25a1.25 1.25 0 1 1 2.5 0V12h.75V9.25a1.25 1.25 0 1 1 2.5 0v5.1c0 3.45-2.44 5.9-6.05 5.9h-2.1c-2.04 0-3.54-.72-4.82-2.3l-2.94-3.63a1.3 1.3 0 0 1 .13-1.78 1.35 1.35 0 0 1 1.84.04l1.19 1.12v-2.5Z' fill='black' stroke='white' stroke-width='1.5' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: contain;
-  pointer-events: none;
-}
 .cf-filter-row-drag-layer__inner {
   display: flex;
   align-items: flex-start;
@@ -2241,10 +2724,11 @@ button[data-slot="button"].filters-reset:disabled {
   font-feature-settings: var(--font-feature);
 }
 
-/* Native DnD can force the black OS cursor; hide it and draw the hand in the floating layer. */
+/* Під час DnD плаваючий шар має pointer-events: none — курсор береться з елементів під ним.
+   Примусово «стиснута рука» для всіх нащадків html, інакше залишається стрілка ОС. */
 html.cf-filter-dnd-active,
 html.cf-filter-dnd-active * {
-  cursor: none !important;
+  cursor: grabbing !important;
 }
 
 /* No results */

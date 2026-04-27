@@ -113,7 +113,8 @@
   transition: opacity 0.15s ease;
 }
 
-.unit-textfield:not(.unit-textfield--disabled) .unit-textfield__outline:focus-within::after {
+.unit-textfield:not(.unit-textfield--disabled) .unit-textfield__outline:focus-within::after,
+.unit-textfield:not(.unit-textfield--disabled).unit-textfield--active .unit-textfield__outline::after {
   opacity: 1;
 }
 

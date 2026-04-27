@@ -22,6 +22,7 @@ import RouteGlyph from "./assets/icons/route.svg?react";
 import SearchGlyph from "./assets/icons/search.svg?react";
 import SidebarCollapseGlyph from "./assets/icons/sidebar-collapse.svg?react";
 import TaxesGlyph from "./assets/icons/taxes.svg?react";
+import ChevronLeftGlyph from "../svg icons/chevron-left.svg?react";
 
 import {
   NAV_SECTIONS_V2,
@@ -29,7 +30,6 @@ import {
   buildSearchIndex,
   findParentGroupId,
   getMetaForId,
-  isValidNavId,
 } from "./navConfig.js";
 
 /** Inline calendar icon for date filter fields (Figma: calendar on date inputs) */
@@ -215,6 +215,790 @@ const DEFAULT_PRESETS = [
     filters: ["order-id", "amount", "currency", "status", "channel"],
   },
 ];
+
+const DATE_PRESETS = [
+  { id: "today", label: "Today" },
+  { id: "yesterday", label: "Yesterday" },
+  { id: "tomorrow", label: "Tomorrow" },
+  { id: "last-7-days", label: "Last 7 days" },
+  { id: "last-30-days", label: "Last 30 days" },
+  { id: "all-time", label: "All time" },
+];
+
+const DATE_MODES = ["Single", "Range", "After", "Before"];
+
+function startOfDay(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function addDays(date, days) {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+function addMonths(date, months) {
+  return new Date(date.getFullYear(), date.getMonth() + months, 1);
+}
+
+function sameDay(a, b) {
+  return Boolean(
+    a &&
+      b &&
+      a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate()
+  );
+}
+
+function formatDateValue(date) {
+  if (!date) return "";
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  return `${dd} / ${mm} / ${date.getFullYear()}`;
+}
+
+function normalizeToHms(raw) {
+  if (raw == null || raw === "") return "00:00:00";
+  const parts = String(raw).trim().split(":");
+  const h = Math.min(23, Math.max(0, parseInt(parts[0] || "0", 10) || 0));
+  const m = Math.min(59, Math.max(0, parseInt(parts[1] || "0", 10) || 0));
+  const s = Math.min(59, Math.max(0, parseInt(parts[2] || "0", 10) || 0));
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+/** Optional trailing time HH:mm:ss (24h). */
+function parseDateTimeValue(value) {
+  const s = String(value ?? "").trim();
+  const match = s.match(
+    /^(\d{1,2})\s*\/\s*(\d{1,2})\s*\/\s*(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/
+  );
+  if (!match) return { date: null, timeHms: null };
+  const day = Number(match[1]);
+  const month = Number(match[2]) - 1;
+  const year = Number(match[3]);
+  const date = new Date(year, month, day);
+  if (date.getFullYear() !== year || date.getMonth() !== month || date.getDate() !== day) {
+    return { date: null, timeHms: null };
+  }
+  const timeHms =
+    match[4] !== undefined
+      ? normalizeToHms(
+          `${match[4]}:${match[5]}:${match[6] !== undefined ? match[6] : "00"}`
+        )
+      : null;
+  return { date, timeHms };
+}
+
+function parseDateValue(value) {
+  return parseDateTimeValue(value).date;
+}
+
+function formatDateTimeForFilter(date, timeHms) {
+  if (!date) return "";
+  const d = formatDateValue(date);
+  const t = normalizeToHms(timeHms);
+  if (t === "00:00:00") return d;
+  return `${d} ${t}`;
+}
+
+function cloneDate(d) {
+  return d ? new Date(d.getTime()) : null;
+}
+
+function createEmptyTabDraft(fromDate, toDate, timeFrom, timeTo) {
+  const base = fromDate || toDate || startOfDay(new Date());
+  const vm = new Date(base.getFullYear(), base.getMonth(), 1);
+  return {
+    fromDate: cloneDate(fromDate),
+    toDate: cloneDate(toDate),
+    visibleMonth: vm,
+    selectedPreset: null,
+    timeFrom: normalizeToHms(timeFrom),
+    timeTo: normalizeToHms(timeTo),
+  };
+}
+
+/** DD / MM / YYYY — digits only; static / separators (Figma). */
+function SegmentedDateInput({ valueDate, onCommitDate, className, ariaLabel }) {
+  const dRef = useRef(null);
+  const mRef = useRef(null);
+  const yRef = useRef(null);
+  const [dv, setDv] = useState(() => (valueDate ? String(valueDate.getDate()).padStart(2, "0") : ""));
+  const [mv, setMv] = useState(() =>
+    valueDate ? String(valueDate.getMonth() + 1).padStart(2, "0") : ""
+  );
+  const [yv, setYv] = useState(() => (valueDate ? String(valueDate.getFullYear()) : ""));
+
+  const syncFromProp = useCallback((d) => {
+    if (!d) {
+      setDv("");
+      setMv("");
+      setYv("");
+      return;
+    }
+    setDv(String(d.getDate()).padStart(2, "0"));
+    setMv(String(d.getMonth() + 1).padStart(2, "0"));
+    setYv(String(d.getFullYear()));
+  }, []);
+
+  useEffect(() => {
+    syncFromProp(valueDate);
+  }, [valueDate, syncFromProp]);
+
+  const commitIfValid = useCallback(() => {
+    if (!dv && !mv && !yv) {
+      onCommitDate(null);
+      return;
+    }
+    const y = parseInt(yv, 10);
+    const m = parseInt(mv, 10);
+    const d = parseInt(dv, 10);
+    if (!yv || yv.length !== 4 || !Number.isFinite(y)) {
+      syncFromProp(valueDate);
+      return;
+    }
+    if (!mv || !Number.isFinite(m) || m < 1 || m > 12) {
+      syncFromProp(valueDate);
+      return;
+    }
+    if (!dv || !Number.isFinite(d) || d < 1 || d > 31) {
+      syncFromProp(valueDate);
+      return;
+    }
+    const date = new Date(y, m - 1, d);
+    if (date.getFullYear() !== y || date.getMonth() !== m - 1 || date.getDate() !== d) {
+      syncFromProp(valueDate);
+      return;
+    }
+    onCommitDate(startOfDay(date));
+    setDv(String(d).padStart(2, "0"));
+    setMv(String(m).padStart(2, "0"));
+    setYv(String(y));
+  }, [dv, mv, yv, onCommitDate, valueDate, syncFromProp]);
+
+  const onDigits = (raw, maxLen, setFn, nextRef) => {
+    const v = raw.replace(/\D/g, "").slice(0, maxLen);
+    setFn(v);
+    if (v.length >= maxLen && nextRef?.current) {
+      nextRef.current.focus();
+    }
+  };
+
+  const focusFirstEmpty = useCallback(() => {
+    if (!dv) dRef.current?.focus();
+    else if (!mv) mRef.current?.focus();
+    else if (!yv || yv.length < 4) yRef.current?.focus();
+    else dRef.current?.focus();
+  }, [dv, mv, yv]);
+
+  return (
+    <div
+      className={className}
+      onMouseDown={(e) => {
+        if (e.target.tagName === "DIV") {
+          e.preventDefault();
+          focusFirstEmpty();
+        }
+      }}
+    >
+      <div className="df-seg-date" role="group" aria-label={ariaLabel}>
+        <input
+          ref={dRef}
+          type="text"
+          inputMode="numeric"
+          autoComplete="off"
+          className="df-seg-date__inp df-seg-date__inp--dd"
+          placeholder="DD"
+          aria-label={`${ariaLabel} — day`}
+          value={dv}
+          onChange={(e) => onDigits(e.target.value, 2, setDv, mRef)}
+          onBlur={commitIfValid}
+        />
+        <span className="df-seg-date__sep" aria-hidden>
+          /
+        </span>
+        <input
+          ref={mRef}
+          type="text"
+          inputMode="numeric"
+          autoComplete="off"
+          className="df-seg-date__inp df-seg-date__inp--mm"
+          placeholder="MM"
+          aria-label={`${ariaLabel} — month`}
+          value={mv}
+          onChange={(e) => onDigits(e.target.value, 2, setMv, yRef)}
+          onBlur={commitIfValid}
+        />
+        <span className="df-seg-date__sep" aria-hidden>
+          /
+        </span>
+        <input
+          ref={yRef}
+          type="text"
+          inputMode="numeric"
+          autoComplete="off"
+          className="df-seg-date__inp df-seg-date__inp--yyyy"
+          placeholder="YYYY"
+          aria-label={`${ariaLabel} — year`}
+          value={yv}
+          onChange={(e) => onDigits(e.target.value, 4, setYv, null)}
+          onBlur={commitIfValid}
+        />
+      </div>
+    </div>
+  );
+}
+
+/** HH : MM (and optional : SS) — digits only; static : separators (Figma). */
+function SegmentedTimeInput({ valueHms, onCommit, ariaLabel, withSeconds = false }) {
+  const hRef = useRef(null);
+  const mRef = useRef(null);
+  const sRef = useRef(null);
+  const t = normalizeToHms(valueHms);
+  const [hv, setHv] = useState(() => t.slice(0, 2));
+  const [mv, setMv] = useState(() => t.slice(3, 5));
+  const [sv, setSv] = useState(() => t.slice(6, 8));
+
+  useEffect(() => {
+    const n = normalizeToHms(valueHms);
+    setHv(n.slice(0, 2));
+    setMv(n.slice(3, 5));
+    setSv(n.slice(6, 8));
+  }, [valueHms]);
+
+  const commit = useCallback(() => {
+    const out = normalizeToHms(`${hv}:${mv}:${withSeconds ? sv : "00"}`);
+    onCommit(out);
+    setHv(out.slice(0, 2));
+    setMv(out.slice(3, 5));
+    setSv(out.slice(6, 8));
+  }, [hv, mv, sv, onCommit, withSeconds]);
+
+  const onDigits = (raw, maxLen, setFn, nextRef) => {
+    const v = raw.replace(/\D/g, "").slice(0, maxLen);
+    setFn(v);
+    if (v.length >= maxLen && nextRef?.current) nextRef.current.focus();
+  };
+
+  const focusFirstEmpty = () => {
+    if (!hv) hRef.current?.focus();
+    else if (!mv) mRef.current?.focus();
+    else if (withSeconds && !sv) sRef.current?.focus();
+    else hRef.current?.focus();
+  };
+
+  return (
+    <div
+      className="df-seg-time"
+      role="group"
+      aria-label={ariaLabel}
+      onMouseDown={(e) => {
+        if (e.target.tagName === "DIV") {
+          e.preventDefault();
+          focusFirstEmpty();
+        }
+      }}
+    >
+      <input
+        ref={hRef}
+        type="text"
+        inputMode="numeric"
+        autoComplete="off"
+        className="df-seg-time__inp"
+        placeholder="HH"
+        aria-label={`${ariaLabel} — hours`}
+        value={hv}
+        onChange={(e) => onDigits(e.target.value, 2, setHv, mRef)}
+        onBlur={commit}
+      />
+      <span className="df-seg-time__sep" aria-hidden>
+        :
+      </span>
+      <input
+        ref={mRef}
+        type="text"
+        inputMode="numeric"
+        autoComplete="off"
+        className="df-seg-time__inp"
+        placeholder="MM"
+        aria-label={`${ariaLabel} — minutes`}
+        value={mv}
+        onChange={(e) => onDigits(e.target.value, 2, setMv, withSeconds ? sRef : null)}
+        onBlur={commit}
+      />
+      {withSeconds ? (
+        <>
+          <span className="df-seg-time__sep" aria-hidden>
+            :
+          </span>
+          <input
+            ref={sRef}
+            type="text"
+            inputMode="numeric"
+            autoComplete="off"
+            className="df-seg-time__inp"
+            placeholder="SS"
+            aria-label={`${ariaLabel} — seconds`}
+            value={sv}
+            onChange={(e) => onDigits(e.target.value, 2, setSv, null)}
+            onBlur={commit}
+          />
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function monthLabel(date) {
+  return new Intl.DateTimeFormat("en", { month: "long", year: "numeric" }).format(date);
+}
+
+function buildMonthDays(monthDate) {
+  const first = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+  const mondayOffset = (first.getDay() + 6) % 7;
+  const start = addDays(first, -mondayOffset);
+  return Array.from({ length: 42 }, (_, i) => addDays(start, i));
+}
+
+function applyDatePreset(id) {
+  const today = startOfDay(new Date());
+  switch (id) {
+    case "today":
+      return { from: today, to: today };
+    case "yesterday": {
+      const d = addDays(today, -1);
+      return { from: d, to: d };
+    }
+    case "tomorrow": {
+      const d = addDays(today, 1);
+      return { from: d, to: d };
+    }
+    case "last-7-days":
+      return { from: addDays(today, -6), to: today };
+    case "last-30-days":
+      return { from: addDays(today, -29), to: today };
+    case "all-time":
+      return { from: null, to: null };
+    default:
+      return { from: null, to: null };
+  }
+}
+
+function DateFilterPopover({ anchorEl, field, values, onApply, onClose }) {
+  const popoverRef = useRef(null);
+  const fromParsed = parseDateTimeValue(values[field.fromId]);
+  const toParsed = parseDateTimeValue(values[field.toId]);
+  const initialFrom = fromParsed.date;
+  const initialTo = toParsed.date;
+  const initialTimeFrom = normalizeToHms(fromParsed.timeHms);
+  const initialTimeTo = normalizeToHms(toParsed.timeHms);
+
+  const [mode, setMode] = useState("Range");
+  const [draftsByMode, setDraftsByMode] = useState(() => ({
+    Single: createEmptyTabDraft(initialFrom, initialTo, initialTimeFrom, initialTimeTo),
+    Range: createEmptyTabDraft(initialFrom, initialTo, initialTimeFrom, initialTimeTo),
+    After: createEmptyTabDraft(initialFrom, null, initialTimeFrom, "00:00"),
+    Before: createEmptyTabDraft(null, initialTo, "00:00", initialTimeTo),
+  }));
+  const [positioned, setPositioned] = useState(false);
+
+  const draft = draftsByMode[mode];
+  const { fromDate, toDate, visibleMonth, selectedPreset, timeFrom, timeTo } = draft;
+
+  const updateDraft = useCallback((patch) => {
+    setDraftsByMode((prev) => ({
+      ...prev,
+      [mode]: { ...prev[mode], ...patch },
+    }));
+  }, [mode]);
+
+  useLayoutEffect(() => {
+    const pop = popoverRef.current;
+    if (!pop || !anchorEl) return;
+
+    const reposition = () => {
+      const p = popoverRef.current;
+      if (!p || !anchorEl) return;
+      const ar = anchorEl.getBoundingClientRect();
+      const pw = p.offsetWidth;
+      const ph = p.offsetHeight;
+      const margin = 8;
+
+      let top = ar.bottom + margin;
+      if (top + ph > window.innerHeight - margin) top = ar.top - ph - margin;
+      if (top < margin) top = margin;
+
+      let left = ar.right - pw;
+      if (left + pw > window.innerWidth - margin) left = window.innerWidth - pw - margin;
+      if (left < margin) left = margin;
+
+      p.style.top = `${top}px`;
+      p.style.left = `${left}px`;
+      setPositioned(true);
+    };
+
+    const scheduleReposition = () => requestAnimationFrame(reposition);
+    scheduleReposition();
+    window.addEventListener("resize", scheduleReposition);
+    window.addEventListener("scroll", reposition, true);
+    return () => {
+      window.removeEventListener("resize", scheduleReposition);
+      window.removeEventListener("scroll", reposition, true);
+    };
+  }, [anchorEl]);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (anchorEl?.contains(e.target)) return;
+      if (popoverRef.current && !popoverRef.current.contains(e.target)) onClose();
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [anchorEl, onClose]);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  const handlePreset = useCallback(
+    (presetId) => {
+      setDraftsByMode((prev) => {
+        const cur = prev[mode];
+        const next = applyDatePreset(presetId);
+        let nf = next.from;
+        let nt = next.to;
+        if (mode === "Single") {
+          const anchor = nt ?? nf;
+          nf = anchor;
+          nt = anchor;
+        }
+        const base = nf || nt || startOfDay(new Date());
+        const vm = new Date(base.getFullYear(), base.getMonth(), 1);
+        return {
+          ...prev,
+          [mode]: {
+            ...cur,
+            fromDate: nf,
+            toDate: nt,
+            visibleMonth: vm,
+            selectedPreset: presetId,
+          },
+        };
+      });
+    },
+    [mode]
+  );
+
+  const handleDayClick = useCallback(
+    (day) => {
+      const d = startOfDay(day);
+      setDraftsByMode((prev) => {
+        const cur = prev[mode];
+        let nextFrom = cur.fromDate;
+        let nextTo = cur.toDate;
+        if (mode === "Single") {
+          nextFrom = d;
+          nextTo = d;
+        } else if (mode === "After") {
+          nextFrom = d;
+          nextTo = null;
+        } else if (mode === "Before") {
+          nextFrom = null;
+          nextTo = d;
+        } else {
+          if (!cur.fromDate || (cur.fromDate && cur.toDate)) {
+            nextFrom = d;
+            nextTo = null;
+          } else if (d < cur.fromDate) {
+            nextTo = cur.fromDate;
+            nextFrom = d;
+          } else {
+            nextTo = d;
+          }
+        }
+        return {
+          ...prev,
+          [mode]: { ...cur, fromDate: nextFrom, toDate: nextTo, selectedPreset: null },
+        };
+      });
+    },
+    [mode]
+  );
+
+  const renderMonth = (monthDate) => {
+    const days = buildMonthDays(monthDate);
+    return (
+      <div className="df-month">
+        <div className="df-month__header">
+          <button
+            type="button"
+            className="df-month__nav"
+            aria-label="Previous month"
+            onClick={() =>
+              setDraftsByMode((prev) => ({
+                ...prev,
+                [mode]: {
+                  ...prev[mode],
+                  visibleMonth: addMonths(prev[mode].visibleMonth, -1),
+                },
+              }))
+            }
+          >
+            <SideIcon icon={ChevronLeftGlyph} />
+          </button>
+          <span className="df-month__title">{monthLabel(monthDate)}</span>
+          <button
+            type="button"
+            className="df-month__nav df-month__nav--next"
+            aria-label="Next month"
+            onClick={() =>
+              setDraftsByMode((prev) => ({
+                ...prev,
+                [mode]: {
+                  ...prev[mode],
+                  visibleMonth: addMonths(prev[mode].visibleMonth, 1),
+                },
+              }))
+            }
+          >
+            <SideIcon icon={ChevronLeftGlyph} />
+          </button>
+        </div>
+        <div className="df-days">
+          {days.map((day) => {
+            const outside = day.getMonth() !== monthDate.getMonth();
+            const selected = sameDay(day, fromDate) || sameDay(day, toDate);
+            const inRange =
+              mode !== "Single" && fromDate && toDate && day > fromDate && day < toDate;
+            return (
+              <button
+                key={day.toISOString()}
+                type="button"
+                className={[
+                  "df-day",
+                  outside ? "df-day--outside" : "",
+                  selected ? "df-day--selected" : "",
+                  inRange ? "df-day--range" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                onClick={() => handleDayClick(startOfDay(day))}
+              >
+                {day.getDate()}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div
+      ref={popoverRef}
+      className={`df-popover${positioned ? " df-popover--visible" : ""}`}
+      role="dialog"
+      aria-label={`${field.label} date filter`}
+    >
+      <div className="df-popover__main">
+        <aside className="df-presets">
+          <div className="df-preset-heading">Presets</div>
+          <div className="df-preset-list">
+            {DATE_PRESETS.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                className={`df-preset-item${selectedPreset === preset.id ? " is-selected" : ""}`}
+                onClick={() => handlePreset(preset.id)}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+        </aside>
+
+        <div className="df-calendar">
+          <div className="df-calendar__body">
+            <div className="df-mode">
+              <div className="df-mode__label">Date</div>
+              <div className="df-mode__group" role="tablist" aria-label="Date mode">
+                {DATE_MODES.map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    className={`df-mode__btn${mode === item ? " is-selected" : ""}`}
+                    onClick={() => setMode(item)}
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="df-calendar__stack">
+              <div className="df-months">
+                {renderMonth(visibleMonth)}
+                {renderMonth(addMonths(visibleMonth, 1))}
+              </div>
+
+            {mode === "Single" ? (
+              <div className="df-date-fields df-date-fields--single">
+                <div className="df-date-field">
+                  <span className="df-date-field__label">On day</span>
+                  <SegmentedDateInput
+                    className="df-date-field__value"
+                    valueDate={fromDate || toDate}
+                    onCommitDate={(d) =>
+                      d ? updateDraft({ fromDate: d, toDate: d }) : updateDraft({ fromDate: null, toDate: null })
+                    }
+                    ariaLabel={`${field.label} — on day`}
+                  />
+                </div>
+                <div className="df-date-field">
+                  <span className="df-date-field__label">From</span>
+                  <div className="df-time-field df-time-field--fill">
+                    <SegmentedTimeInput
+                      valueHms={timeFrom}
+                      onCommit={(t) => updateDraft({ timeFrom: t })}
+                      ariaLabel={`${field.label} — from time`}
+                      withSeconds
+                    />
+                  </div>
+                </div>
+                <div className="df-date-field">
+                  <span className="df-date-field__label">To</span>
+                  <div className="df-time-field df-time-field--fill">
+                    <SegmentedTimeInput
+                      valueHms={timeTo}
+                      onCommit={(t) => updateDraft({ timeTo: t })}
+                      ariaLabel={`${field.label} — to time`}
+                      withSeconds
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : mode === "Range" ? (
+              <div className="df-date-fields df-date-fields--range">
+                <div className="df-date-field-group">
+                  <span className="df-date-field__label">From</span>
+                  <div className="df-date-field__inline">
+                    <SegmentedDateInput
+                      className="df-date-field__value df-date-field__value--flex"
+                      valueDate={fromDate}
+                      onCommitDate={(d) => updateDraft({ fromDate: d })}
+                      ariaLabel={`${field.label} — from date`}
+                    />
+                    <div className="df-time-field">
+                      <SegmentedTimeInput
+                        valueHms={timeFrom}
+                        onCommit={(t) => updateDraft({ timeFrom: t })}
+                        ariaLabel={`${field.label} — from time`}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="df-date-field-group">
+                  <span className="df-date-field__label">To</span>
+                  <div className="df-date-field__inline">
+                    <SegmentedDateInput
+                      className="df-date-field__value df-date-field__value--flex"
+                      valueDate={toDate}
+                      onCommitDate={(d) => updateDraft({ toDate: d })}
+                      ariaLabel={`${field.label} — to date`}
+                    />
+                    <div className="df-time-field">
+                      <SegmentedTimeInput
+                        valueHms={timeTo}
+                        onCommit={(t) => updateDraft({ timeTo: t })}
+                        ariaLabel={`${field.label} — to time`}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : mode === "After" ? (
+              <div className="df-date-fields df-date-fields--after">
+                <div className="df-date-field-group df-date-field-group--fixed">
+                  <span className="df-date-field__label">After</span>
+                  <div className="df-date-field__inline">
+                    <SegmentedDateInput
+                      className="df-date-field__value df-date-field__value--flex"
+                      valueDate={fromDate}
+                      onCommitDate={(d) => updateDraft({ fromDate: d })}
+                      ariaLabel={`${field.label} — after date`}
+                    />
+                    <div className="df-time-field">
+                      <SegmentedTimeInput
+                        valueHms={timeFrom}
+                        onCommit={(t) => updateDraft({ timeFrom: t })}
+                        ariaLabel={`${field.label} — after time`}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="df-date-fields df-date-fields--before">
+                <div className="df-date-field-group df-date-field-group--fixed">
+                  <span className="df-date-field__label">Before</span>
+                  <div className="df-date-field__inline">
+                    <SegmentedDateInput
+                      className="df-date-field__value df-date-field__value--flex"
+                      valueDate={toDate}
+                      onCommitDate={(d) => updateDraft({ toDate: d })}
+                      ariaLabel={`${field.label} — before date`}
+                    />
+                    <div className="df-time-field">
+                      <SegmentedTimeInput
+                        valueHms={timeTo}
+                        onCommit={(t) => updateDraft({ timeTo: t })}
+                        ariaLabel={`${field.label} — before time`}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            </div>
+          </div>
+
+          <div className="df-footer">
+            <button type="button" className="cf-footer__btn cf-footer__btn--secondary" onClick={onClose}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="cf-footer__btn cf-footer__btn--save"
+              onClick={() => {
+                const d = draftsByMode[mode];
+                const pack = (date, t) => formatDateTimeForFilter(date, t);
+                if (mode === "Single") {
+                  const day = d.fromDate || d.toDate;
+                  onApply(pack(day, d.timeFrom), pack(day, d.timeTo));
+                } else if (mode === "After") {
+                  onApply(pack(d.fromDate, d.timeFrom), "");
+                } else if (mode === "Before") {
+                  onApply("", pack(d.toDate, d.timeTo));
+                } else {
+                  onApply(pack(d.fromDate, d.timeFrom), pack(d.toDate, d.timeTo));
+                }
+              }}
+            >
+              Apply
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /* ─── Drag handle icon (6-dot grip) ─── */
 function DragHandleIcon() {
@@ -524,8 +1308,8 @@ function CustomizeFiltersPopover({
   const handleDragStart = useCallback(
     (e, filterId) => {
       document.documentElement.classList.add("cf-filter-dnd-active");
-      document.documentElement.style.setProperty("cursor", "none", "important");
-      document.body.style.setProperty("cursor", "none", "important");
+      document.documentElement.style.setProperty("cursor", "grabbing", "important");
+      document.body.style.setProperty("cursor", "grabbing", "important");
       dragItemId.current = filterId;
       e.dataTransfer.effectAllowed = "move";
 
@@ -559,8 +1343,6 @@ function CustomizeFiltersPopover({
         zIndex: "10050",
         pointerEvents: "none",
         boxSizing: "border-box",
-        "--cf-drag-cursor-x": `${ox}px`,
-        "--cf-drag-cursor-y": `${oy}px`,
       });
       document.body.appendChild(layer);
       dragLayerRef.current = layer;
@@ -654,7 +1436,7 @@ function CustomizeFiltersPopover({
     return availableSort === "asc" ? cmp : -cmp;
   });
 
-  const groupedAvailable = useMemo(() => {
+  const groupedAvailable = (() => {
     const groups = [];
     const byGroup = new Map();
     for (const f of filteredAvailable) {
@@ -672,7 +1454,7 @@ function CustomizeFiltersPopover({
       return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
     });
     return groups;
-  }, [filteredAvailable]);
+  })();
 
   return (
     <div className={`cf-popover${positioned ? " cf-popover--visible" : ""}`} ref={popoverRef}>
@@ -824,12 +1606,14 @@ function CustomizeFiltersPopover({
                             className="cf-filter-row__drag"
                             onMouseDown={(ev) => {
                               if (ev.button !== 0) return;
+                              document.documentElement.classList.add("cf-filter-dnd-active");
                               document.documentElement.style.setProperty("cursor", "grabbing", "important");
                               document.body.style.setProperty("cursor", "grabbing", "important");
                               const onUp = () => {
                                 window.removeEventListener("mouseup", onUp);
                                 queueMicrotask(() => {
                                   if (dragItemId.current == null) {
+                                    document.documentElement.classList.remove("cf-filter-dnd-active");
                                     document.documentElement.style.removeProperty("cursor");
                                     document.body.style.removeProperty("cursor");
                                   }
@@ -1139,6 +1923,7 @@ export default function App() {
   const [filtersExpanded, setFiltersExpanded] = useState(true);
   const [filtersSearch, setFiltersSearch] = useState("");
   const [customizeOpen, setCustomizeOpen] = useState(false);
+  const [datePopover, setDatePopover] = useState(null);
   const [personalPresets, setPersonalPresets] = useState([]);
   const [activePanelFilterIds, setActivePanelFilterIds] = useState(() =>
     normalizeActiveFilterIds([...DEFAULT_ADDED_IDS])
@@ -1184,6 +1969,25 @@ export default function App() {
     setFilterDraftValues((prev) => ({ ...prev, [id]: typeof next === "function" ? next(prev[id] ?? "") : next }));
   }, []);
 
+  const openDatePopover = useCallback((field, anchorEl) => {
+    setCustomizeOpen(false);
+    setDatePopover({ field, anchorEl });
+  }, []);
+
+  const applyDatePopover = useCallback((field, fromValue, toValue) => {
+    setFilterFieldErrors((prev) => {
+      if (!prev[field.fromId] && !prev[field.toId]) return prev;
+      const { [field.fromId]: _from, [field.toId]: _to, ...rest } = prev;
+      return rest;
+    });
+    setFilterDraftValues((prev) => ({
+      ...prev,
+      [field.fromId]: fromValue,
+      [field.toId]: toValue,
+    }));
+    setDatePopover(null);
+  }, []);
+
   const handleApplyFilters = useCallback(() => {
     const { fieldErrors, toolbarError } = validateFilterPanel(
       activePanelFilterIds,
@@ -1206,6 +2010,7 @@ export default function App() {
     setFiltersSearch("");
     setAppliedFiltersSearch("");
     setToolbarSearchError(null);
+    setDatePopover(null);
   }, [setPanelFilterIds]);
 
   const customizeBtnRef = useRef(null);
@@ -1674,7 +2479,10 @@ export default function App() {
                   aria-expanded={filtersExpanded}
                   aria-controls="filters-panel-body"
                   onClick={() => {
-                    if (filtersExpanded) setCustomizeOpen(false);
+                    if (filtersExpanded) {
+                      setCustomizeOpen(false);
+                      setDatePopover(null);
+                    }
                     setFiltersExpanded((v) => !v);
                   }}
                 >
@@ -1779,11 +2587,17 @@ export default function App() {
                             className={[
                               "unit-textfield",
                               "unit-textfield--sm",
+                              datePopover?.field.id === f.id ? "unit-textfield--active" : "",
                               err ? "unit-textfield--error" : "",
                               disabledField ? "unit-textfield--disabled" : "",
                             ]
                               .filter(Boolean)
                               .join(" ")}
+                            onClick={(e) => {
+                              if (!isDateRange || disabledField) return;
+                              if (e.target.closest("input")) return;
+                              openDatePopover(f, e.currentTarget);
+                            }}
                           >
                             <div className="unit-textfield__label-wrapper">
                               <div className="unit-textfield__label">{f.label}</div>
@@ -1801,12 +2615,25 @@ export default function App() {
                                     <CalendarGlyph className="icon" />
                                     <input
                                       type="text"
-                                      readOnly
-                                      placeholder="Select date"
+                                      placeholder="DD / MM / YYYY - DD / MM / YYYY"
                                       aria-label={f.label}
                                       value={rangeValue}
                                       disabled={Boolean(disabledField)}
                                       aria-invalid={err ? true : undefined}
+                                      aria-haspopup="dialog"
+                                      aria-expanded={datePopover?.field.id === f.id}
+                                      onChange={(e) => {
+                                        const v = e.target.value;
+                                        const sep = " - ";
+                                        const i = v.indexOf(sep);
+                                        if (i === -1) {
+                                          setFilterDraft(f.fromId, v.trim());
+                                          setFilterDraft(f.toId, "");
+                                        } else {
+                                          setFilterDraft(f.fromId, v.slice(0, i).trim());
+                                          setFilterDraft(f.toId, v.slice(i + sep.length).trim());
+                                        }
+                                      }}
                                     />
                                   </>
                                 ) : (
@@ -1839,7 +2666,10 @@ export default function App() {
                     className={`filters-customize-link${customizeOpen ? " is-active" : ""}`}
                     aria-expanded={customizeOpen}
                     aria-haspopup="dialog"
-                    onClick={() => setCustomizeOpen((v) => !v)}
+                    onClick={() => {
+                      setDatePopover(null);
+                      setCustomizeOpen((v) => !v);
+                    }}
                   >
                     <SideIcon icon={SettingsCustomizeGlyph} />
                     <span>Customize</span>
@@ -1887,6 +2717,16 @@ export default function App() {
           onPersonalPresetsChange={setPersonalPresets}
           activeFilterIds={activePanelFilterIds}
           onActiveFilterIdsChange={setPanelFilterIds}
+        />
+      )}
+
+      {datePopover && (
+        <DateFilterPopover
+          anchorEl={datePopover.anchorEl}
+          field={datePopover.field}
+          values={filterDraftValues}
+          onApply={(fromValue, toValue) => applyDatePopover(datePopover.field, fromValue, toValue)}
+          onClose={() => setDatePopover(null)}
         />
       )}
     </div>
