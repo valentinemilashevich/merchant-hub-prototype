@@ -1245,6 +1245,63 @@ html,
   box-sizing: border-box;
 }
 
+.filters-field--date-range {
+  grid-column: span 2;
+}
+
+@media (max-width: 520px) {
+  .filters-field--date-range {
+    grid-column: span 1;
+  }
+}
+
+/* Inline segmented date range: [DD/MM/YYYY] → [DD/MM/YYYY] */
+.fp-date-range-segments {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.fp-date-range-segments__half {
+  flex: 0 0 auto;
+  cursor: text;
+}
+
+.fp-date-range-segments__half .df-seg-date {
+  gap: 1px;
+}
+
+.fp-date-range-segments__half .df-seg-date__inp--dd,
+.fp-date-range-segments__half .df-seg-date__inp--mm {
+  width: 20px;
+  min-width: 20px;
+  flex: 0 0 20px;
+}
+
+.fp-date-range-segments__half .df-seg-date__inp--yyyy {
+  width: 36px;
+  min-width: 36px;
+  flex: 0 0 36px;
+}
+
+.fp-date-range-segments__half .df-seg-date__sep {
+  width: 5px;
+  flex: 0 0 5px;
+}
+
+.fp-date-range-segments__arrow {
+  flex: 0 0 10px;
+  width: 10px;
+  font: var(--font-caption-medium);
+  line-height: 16px;
+  color: var(--color-dense-900);
+  text-align: center;
+  letter-spacing: 0.12px;
+  font-feature-settings: var(--font-feature);
+}
+
 .filters-date-range-stack {
   display: flex;
   flex-direction: column;

@@ -1021,28 +1021,56 @@ const FILTER_DRAG_GRIP_SVG_HTML =
   '<circle cx="6" cy="8" r="1" fill="currentColor"/><circle cx="10" cy="8" r="1" fill="currentColor"/>' +
   '<circle cx="6" cy="12" r="1" fill="currentColor"/><circle cx="10" cy="12" r="1" fill="currentColor"/></svg>';
 
-/* ─── Toggle switch (animates before firing onChange) ─── */
+/* ─── Toggle switch (animates, then waits before list move / onChange) ─── */
 const TOGGLE_ANIM_MS = 220;
+const TOGGLE_MOVE_DELAY_MS = 180;
 
 function ToggleSwitch({ checked, onChange }) {
   const [animating, setAnimating] = useState(null); // "on" | "off" | null
+  const [heldVisual, setHeldVisual] = useState(null); // target checked while waiting to commit
   const timerRef = useRef(null);
+  const moveDelayRef = useRef(null);
+
+  useEffect(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    if (moveDelayRef.current) {
+      clearTimeout(moveDelayRef.current);
+      moveDelayRef.current = null;
+    }
+    setAnimating(null);
+    setHeldVisual(null);
+  }, [checked]);
 
   const handleClick = useCallback(() => {
-    if (timerRef.current) return;
+    if (timerRef.current || moveDelayRef.current || heldVisual !== null) return;
     const direction = checked ? "off" : "on";
+    const targetChecked = !checked;
     setAnimating(direction);
     timerRef.current = setTimeout(() => {
       timerRef.current = null;
       setAnimating(null);
-      onChange();
+      setHeldVisual(targetChecked);
+      moveDelayRef.current = setTimeout(() => {
+        moveDelayRef.current = null;
+        onChange();
+      }, TOGGLE_MOVE_DELAY_MS);
     }, TOGGLE_ANIM_MS);
-  }, [checked, onChange]);
+  }, [checked, onChange, heldVisual]);
 
-  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+  useEffect(
+    () => () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      if (moveDelayRef.current) clearTimeout(moveDelayRef.current);
+    },
+    []
+  );
 
-  /* While animating, show the TARGET visual state; otherwise show checked */
-  const visual = animating ? (animating === "on") : checked;
+  const baseChecked = heldVisual !== null ? heldVisual : checked;
+  /* While animating, show the TARGET visual state; otherwise held or prop */
+  const visual = animating ? animating === "on" : baseChecked;
   const animClass = animating === "on" ? " cf-toggle--anim-on" : animating === "off" ? " cf-toggle--anim-off" : "";
 
   return (
@@ -2575,14 +2603,8 @@ export default function App() {
                         ? filterFieldErrors[f.fromId] || filterFieldErrors[f.toId]
                         : filterFieldErrors[f.id];
                       const disabledField = f.id === "descriptor";
-                      const rangeValue = isDateRange
-                        ? [filterDraftValues[f.fromId], filterDraftValues[f.toId]]
-                            .map((v) => (v ?? "").trim())
-                            .filter(Boolean)
-                            .join(" - ")
-                        : "";
                       return (
-                        <div key={f.id} className="filters-field">
+                        <div key={f.id} className={`filters-field${isDateRange ? " filters-field--date-range" : ""}`}>
                           <div
                             className={[
                               "unit-textfield",
@@ -2593,6 +2615,8 @@ export default function App() {
                             ]
                               .filter(Boolean)
                               .join(" ")}
+                            aria-haspopup={isDateRange ? "dialog" : undefined}
+                            aria-expanded={isDateRange ? datePopover?.field.id === f.id : undefined}
                             onClick={(e) => {
                               if (!isDateRange || disabledField) return;
                               if (e.target.closest("input")) return;
@@ -2613,28 +2637,27 @@ export default function App() {
                                 {isDateRange ? (
                                   <>
                                     <CalendarGlyph className="icon" />
-                                    <input
-                                      type="text"
-                                      placeholder="DD / MM / YYYY - DD / MM / YYYY"
-                                      aria-label={f.label}
-                                      value={rangeValue}
-                                      disabled={Boolean(disabledField)}
-                                      aria-invalid={err ? true : undefined}
-                                      aria-haspopup="dialog"
-                                      aria-expanded={datePopover?.field.id === f.id}
-                                      onChange={(e) => {
-                                        const v = e.target.value;
-                                        const sep = " - ";
-                                        const i = v.indexOf(sep);
-                                        if (i === -1) {
-                                          setFilterDraft(f.fromId, v.trim());
-                                          setFilterDraft(f.toId, "");
-                                        } else {
-                                          setFilterDraft(f.fromId, v.slice(0, i).trim());
-                                          setFilterDraft(f.toId, v.slice(i + sep.length).trim());
-                                        }
-                                      }}
-                                    />
+                                    <div className="fp-date-range-segments">
+                                      <SegmentedDateInput
+                                        className="fp-date-range-segments__half"
+                                        valueDate={parseDateValue(filterDraftValues[f.fromId])}
+                                        onCommitDate={(d) => {
+                                          const prev = parseDateTimeValue(filterDraftValues[f.fromId]);
+                                          setFilterDraft(f.fromId, d ? formatDateTimeForFilter(d, prev.timeHms) : "");
+                                        }}
+                                        ariaLabel={`${f.label} from`}
+                                      />
+                                      <span className="fp-date-range-segments__arrow" aria-hidden>→</span>
+                                      <SegmentedDateInput
+                                        className="fp-date-range-segments__half"
+                                        valueDate={parseDateValue(filterDraftValues[f.toId])}
+                                        onCommitDate={(d) => {
+                                          const prev = parseDateTimeValue(filterDraftValues[f.toId]);
+                                          setFilterDraft(f.toId, d ? formatDateTimeForFilter(d, prev.timeHms) : "");
+                                        }}
+                                        ariaLabel={`${f.label} to`}
+                                      />
+                                    </div>
                                   </>
                                 ) : (
                                   renderFilterInput(f, {
