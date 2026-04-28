@@ -144,11 +144,12 @@
   transition: border-color 0.15s ease;
 }
 
-.unit-textfield__outline:hover:not(:focus-within) .unit-textfield__field {
+/* Active (e.g. anchored popover open) — no hover border shift; Figma Filters main field */
+.unit-textfield:not(.unit-textfield--active) .unit-textfield__outline:hover:not(:focus-within) .unit-textfield__field {
   border-color: var(--tf-border-hover);
 }
 
-.unit-textfield--error .unit-textfield__outline:hover:not(:focus-within) .unit-textfield__field {
+.unit-textfield--error:not(.unit-textfield--active) .unit-textfield__outline:hover:not(:focus-within) .unit-textfield__field {
   border-color: var(--tf-border-error);
 }
 
@@ -197,6 +198,28 @@
   font-feature-settings: var(--font-feature);
 }
 
+/* Segmented date/time — fixed widths (Filters Figma); overrides flex:1 above.
+   Never use min-width:0 here — it wins over .df-seg-* base min-width and can collapse inputs to 0.
+   PRODUCT LOCK: digits stay text-align:center (same as df-seg-* in side-panel.css — do not set start/end without design sign-off). */
+.unit-textfield__field input.df-seg-date__inp--dd,
+.unit-textfield__field input.df-seg-date__inp--mm,
+.unit-textfield__field input.df-seg-time__inp {
+  flex: 0 0 auto;
+  min-width: 20px;
+  text-align: center;
+}
+
+.unit-textfield__field input.df-seg-date__inp:placeholder-shown,
+.unit-textfield__field input.df-seg-time__inp:placeholder-shown {
+  font-weight: var(--fw-normal);
+}
+
+.unit-textfield__field input.df-seg-date__inp--yyyy {
+  flex: 0 0 auto;
+  min-width: 36px;
+  text-align: center;
+}
+
 .unit-textfield__field input::placeholder {
   font-weight: var(--fw-normal);
   color: var(--color-dense-200);
@@ -242,11 +265,11 @@
   transition: border-color 0.15s ease;
 }
 
-.unit-textfield__outline:hover:not(:focus-within) .unit-textfield__split--compare {
+.unit-textfield:not(.unit-textfield--active) .unit-textfield__outline:hover:not(:focus-within) .unit-textfield__split--compare {
   border-right-color: var(--tf-border-hover);
 }
 
-.unit-textfield--error .unit-textfield__outline:hover:not(:focus-within) .unit-textfield__split--compare {
+.unit-textfield--error:not(.unit-textfield--active) .unit-textfield__outline:hover:not(:focus-within) .unit-textfield__split--compare {
   border-right-color: var(--tf-border-error);
 }
 
@@ -302,4 +325,39 @@
 
 .unit-textfield--error .unit-textfield__helper {
   color: var(--color-burgundy-800);
+}
+
+/* Optional trailing clear — icon button (filters toolbar, grid, Customize search, presets, …) */
+.unit-textfield__clear {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-dense-500);
+  cursor: pointer;
+}
+
+.unit-textfield__clear:hover {
+  color: var(--color-dense-700);
+  background: var(--color-dense-900-opacity-100);
+}
+
+.unit-textfield__clear svg {
+  display: block;
+}
+
+.unit-textfield__field:not(.unit-textfield__field--split) > .unit-textfield__clear {
+  margin-left: auto;
+}
+
+.unit-textfield__field--split > .unit-textfield__clear {
+  align-self: center;
+  margin-inline: var(--space-100) var(--tf-padding-x-sm);
 }

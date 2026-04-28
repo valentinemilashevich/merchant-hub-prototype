@@ -24,7 +24,7 @@ body {
   position: relative;
   /* Above .main-content: collapse sits past 100% width (side-panel-chi layout) */
   z-index: 1;
-  width: 280px;
+  width: 264px;
   height: 100vh;
   flex-shrink: 0;
   transition: width 0.25s ease;
@@ -41,10 +41,10 @@ body {
   background: #ffffff;
   width: 100%;
   height: 100vh;
-  padding: 20px;
+  padding: var(--space-300);
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: var(--space-400);
   position: relative;
   overflow: hidden;
 }
@@ -55,7 +55,7 @@ body {
 .top-wrapper {
   display: flex;
   flex-direction: column;
-  gap: var(--space-400);
+  gap: var(--space-200);
   width: 240px;
   flex-shrink: 0;
 }
@@ -74,7 +74,8 @@ body {
   display: flex;
   flex: 1;
   align-items: center;
-  gap: var(--space-300);
+  gap: var(--space-200);
+  height: 40px;
   padding: var(--space-100);
   border-radius: var(--radius-lg);
   cursor: pointer;
@@ -83,17 +84,18 @@ body {
 .account-inner:hover { background: var(--color-grey-200); }
 
 .account-avatar {
-  width: 24px;
-  height: 24px;
-  border-radius: var(--radius-sm);
-  background: var(--color-brand-green);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: var(--color-dense-900);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   font: var(--font-label-medium);
-  color: #fff;
+  color: var(--color-soft-100);
   font-feature-settings: var(--font-feature);
+  overflow: hidden;
 }
 
 .account-name-wrapper {
@@ -178,16 +180,19 @@ body {
    ───────────────────────────────────────────── */
 .search-wrapper {
   width: 240px;
-  padding: var(--space-100) 0;
+  padding: var(--space-100);
+  border-radius: var(--radius-lg);
 }
 
 .search-bar {
-  background: var(--color-grey-200);
+  background: var(--color-soft-100);
   height: 32px;
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-dense-900-opacity-300);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
   display: flex;
   align-items: center;
-  padding: 0 var(--space-200);
+  padding: var(--space-100);
   gap: var(--space-200);
   cursor: text;
 }
@@ -275,7 +280,7 @@ body {
 .panel-content {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: var(--space-400);
   height: 100%;
   overflow-y: auto;
   scrollbar-width: none;
@@ -286,7 +291,7 @@ body {
 #nav-content {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: var(--space-400);
 }
 
 /* ─────────────────────────────────────────────
@@ -399,7 +404,7 @@ body {
 .category-item {
   display: flex;
   align-items: center;
-  gap: var(--space-300);
+  gap: var(--space-200);
   padding: var(--space-100);
   border-radius: var(--radius-md);
   width: 240px;
@@ -547,7 +552,7 @@ body {
 .user-wrapper {
   display: flex;
   align-items: center;
-  gap: var(--space-300);
+  gap: var(--space-200);
   padding: var(--space-100);
   border-radius: var(--radius-lg);
   width: 240px;
@@ -580,19 +585,100 @@ body {
 }
 
 .user-name {
-  font: var(--font-body-medium);
+  font: var(--font-caption-medium);
   color: var(--color-dense-900);
   font-feature-settings: var(--font-feature);
 }
 
 .user-email {
   font: var(--font-caption-normal);
-  color: var(--color-dense-200);
+  color: var(--color-dense-400);
   letter-spacing: 0.12px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   font-feature-settings: var(--font-feature);
+}
+
+/* ─────────────────────────────────────────────
+   Notification badge (header)
+   ───────────────────────────────────────────── */
+.notification-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-100);
+  border-radius: var(--radius-lg);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.notification-btn:hover { background: var(--color-grey-200); }
+
+.notification-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 var(--space-100);
+  border-radius: var(--radius-sm);
+  background: var(--color-burgundy-700);
+  font: var(--font-caption-medium);
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--color-soft-100);
+  letter-spacing: 0.12px;
+  font-feature-settings: var(--font-feature);
+}
+
+/* ─────────────────────────────────────────────
+   Bottom wrapper (devtools + user row)
+   ───────────────────────────────────────────── */
+.bottom-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-400);
+  flex-shrink: 0;
+}
+
+.platform-section {
+  display: flex;
+  flex-direction: column;
+  padding: 0 var(--space-100);
+  padding-bottom: var(--space-200);
+}
+
+.footer-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-200);
+  width: 100%;
+}
+
+.footer-row .user-wrapper {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+}
+
+/* ─────────────────────────────────────────────
+   Help button (footer)
+   ───────────────────────────────────────────── */
+.help-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-100);
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+  cursor: pointer;
+  color: var(--color-dense-400);
+}
+.help-btn:hover { background: var(--color-grey-200); }
+.help-btn svg.icon {
+  width: 18px;
+  height: 18px;
+  color: inherit;
 }
 
 /* ─────────────────────────────────────────────
@@ -656,9 +742,9 @@ body {
 .main-view.visible {
   display: flex;
 }
-/* Vertical rhythm: 32px under header; 16px (spec 16pt) filters → table skeleton */
+/* Vertical rhythm: margin under header; 16px filters → table skeleton */
 .main-view > .page-header {
-  margin-bottom: var(--space-600);
+  margin-bottom: var(--space-500);
 }
 .main-view > .filters-section {
   margin-bottom: var(--space-400);
@@ -904,8 +990,9 @@ body {
    ───────────────────────────────────────────── */
 .collapse-btn {
   position: absolute;
-  left: calc(100% + var(--space-300));
-  top: 22px;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
   width: 24px;
   height: 24px;
   display: flex;
@@ -936,23 +1023,29 @@ body {
    Sidebar collapsed state
    ───────────────────────────────────────────── */
 
-/* Reduce side padding in collapsed state (vertical padding stays 20px from .side-panel) */
+/* Collapsed rail: horizontal padding matches Figma (--space-300); vertical from .side-panel */
 .sidebar-container.collapsed .side-panel {
-  padding-left: 12px;
-  padding-right: 12px;
+  padding-left: var(--space-300);
+  padding-right: var(--space-300);
 }
 
 /* Fix container widths to fill narrow panel */
 .sidebar-container.collapsed .top-wrapper,
 .sidebar-container.collapsed .category-group,
 .sidebar-container.collapsed .category-item,
-.sidebar-container.collapsed .user-wrapper {
+.sidebar-container.collapsed .user-wrapper,
+.sidebar-container.collapsed .bottom-wrapper {
   width: 100%;
 }
+.sidebar-container.collapsed .top-wrapper {
+  align-items: center;
+}
 
-/* Center remaining icons */
+/* Collapsed: stack avatar + notification vertically */
 .sidebar-container.collapsed .account-wrapper {
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-200);
 }
 .sidebar-container.collapsed .account-inner {
   flex: none;
@@ -982,6 +1075,46 @@ body {
 .sidebar-container.collapsed .submenu,
 .sidebar-container.collapsed .pin-btn {
   display: none;
+}
+
+/* Collapsed: notification badge as standalone row */
+.sidebar-container.collapsed .notification-btn {
+  padding: var(--space-100);
+  justify-content: center;
+}
+
+/* Collapsed: help button visible, icon-only */
+.sidebar-container.collapsed .help-btn {
+  padding: var(--space-100);
+  justify-content: center;
+}
+
+/* Collapsed: platform section visible, icon-only */
+.sidebar-container.collapsed .platform-section .cat-label-row {
+  display: none;
+}
+.sidebar-container.collapsed .platform-section {
+  padding: 0;
+}
+.sidebar-container.collapsed .platform-section .category-item {
+  padding: var(--space-100);
+}
+
+/* Collapsed: footer-row stacks vertically, help above user */
+.sidebar-container.collapsed .footer-row {
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.sidebar-container.collapsed .footer-row .help-btn {
+  order: -1;
+}
+
+/* Collapsed: bottom wrapper centered with 16px gap */
+.sidebar-container.collapsed .bottom-wrapper {
+  align-items: center;
+  gap: 16px;
+  padding: var(--space-300);
 }
 
 /* Inline styles from React can override the above — keep Search / Recents hidden when collapsed (see side-panel-chi.vercel.app) */
@@ -1175,30 +1308,6 @@ html,
   border-color: var(--tf-border-error);
 }
 
-.filters-search-clear {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  margin: 0;
-  padding: 0;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--color-dense-500);
-  font: inherit;
-  font-size: 18px;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.filters-search-clear:hover {
-  color: var(--color-dense-700);
-  background: var(--color-dense-900-opacity-100);
-}
-
 .filters-toolbar-actions {
   display: flex;
   flex-direction: row;
@@ -1208,10 +1317,10 @@ html,
   flex-shrink: 0;
 }
 
-/* Figma 431:35207 / 352:11985 — fields grid (4×N, gap 12, cell max 320) */
+/* Figma 431:35207 — fluid columns (min 272px); filters wrap to next row when row is full */
 .filters-panel-fields {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(272px, 1fr));
   gap: var(--fp-grid-gap);
   flex: 1 1 auto;
   min-height: 0;
@@ -1222,84 +1331,135 @@ html,
   -webkit-font-smoothing: antialiased;
 }
 
-@media (max-width: 1040px) {
-  .filters-panel-fields {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 520px) {
-  .filters-panel-fields {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
 .filters-field {
   display: flex;
   flex-direction: column;
   gap: var(--fp-field-label-gap);
   justify-self: start;
   width: 100%;
-  max-width: 320px;
   min-width: 0;
   box-sizing: border-box;
 }
 
-.filters-field--date-range {
-  grid-column: span 2;
-}
+/* ── Filter panel: date field display (Figma 1:1) ── */
 
-@media (max-width: 520px) {
-  .filters-field--date-range {
-    grid-column: span 1;
-  }
-}
-
-/* Inline segmented date range: [DD/MM/YYYY] → [DD/MM/YYYY] */
-.fp-date-range-segments {
+.fp-dates-group {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 2px;
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.fp-date-range-segments__half {
   flex: 0 0 auto;
-  cursor: text;
+  min-width: 0;
+  height: 24px;
 }
 
-.fp-date-range-segments__half .df-seg-date {
+.fp-date-wrap {
+  display: flex;
+  align-items: center;
   gap: 1px;
+  flex-shrink: 0;
+  height: 24px;
 }
 
-.fp-date-range-segments__half .df-seg-date__inp--dd,
-.fp-date-range-segments__half .df-seg-date__inp--mm {
+.fp-date-wrap__day,
+.fp-date-wrap__month {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
   width: 20px;
-  min-width: 20px;
-  flex: 0 0 20px;
 }
 
-.fp-date-range-segments__half .df-seg-date__inp--yyyy {
+.fp-date-wrap__year {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
   width: 36px;
-  min-width: 36px;
-  flex: 0 0 36px;
 }
 
-.fp-date-range-segments__half .df-seg-date__sep {
-  width: 5px;
-  flex: 0 0 5px;
-}
-
-.fp-date-range-segments__arrow {
-  flex: 0 0 10px;
-  width: 10px;
-  font: var(--font-caption-medium);
-  line-height: 16px;
-  color: var(--color-dense-900);
+.fp-date-wrap__inp {
+  border: none;
+  background: transparent;
+  margin: 0;
+  padding: 0;
+  width: 100%;
   text-align: center;
-  letter-spacing: 0.12px;
+  font-variant-numeric: tabular-nums;
+  outline: none;
+  font: var(--font-body-normal);
+  line-height: 24px;
+  color: var(--color-dense-900);
   font-feature-settings: var(--font-feature);
+  box-sizing: border-box;
+}
+
+.fp-date-wrap__inp:not(:placeholder-shown) {
+  font: var(--font-label-medium);
+  line-height: 24px;
+}
+
+.fp-date-wrap__inp::placeholder {
+  color: var(--color-dense-200);
+  font-weight: 400;
+}
+
+.fp-date-wrap__div {
+  flex-shrink: 0;
+  font: var(--font-body-normal);
+  line-height: 24px;
+  color: var(--color-soft-800);
+  font-feature-settings: var(--font-feature);
+  user-select: none;
+  pointer-events: none;
+}
+
+/* Figma — sign wrapper + SVG (не текстові гліфи) */
+.fp-dates-group__sign {
+  flex-shrink: 0;
+  box-sizing: border-box;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-dense-900);
+  user-select: none;
+  pointer-events: none;
+}
+
+.fp-dates-group__sign svg,
+.fp-dates-group__sign-svg {
+  display: block;
+  flex-shrink: 0;
+  align-self: center;
+  overflow: visible;
+}
+
+.fp-dates-group__sign--after svg,
+.fp-dates-group__sign--after .fp-dates-group__sign-svg,
+.fp-dates-group__sign--before svg,
+.fp-dates-group__sign--before .fp-dates-group__sign-svg {
+  width: 10px;
+  height: 10px;
+  aspect-ratio: 1;
+}
+
+.fp-dates-group__sign--arrow svg,
+.fp-dates-group__sign--arrow .fp-dates-group__sign-svg {
+  width: 10px;
+  height: 10px;
+  aspect-ratio: 1;
+}
+
+.fp-dates-group__sign--after,
+.fp-dates-group__sign--before {
+  width: 10px;
+  min-width: 10px;
+}
+
+.fp-dates-group__sign--arrow {
+  width: 10px;
+  min-width: 10px;
 }
 
 .filters-date-range-stack {
@@ -1341,12 +1501,14 @@ html,
 
 .filters-field .unit-textfield__outline {
   width: 100%;
+  justify-content: flex-start;
   box-shadow: var(--unit-shadow-sm);
 }
 
 .filters-field .unit-textfield__field {
   border-color: var(--color-soft-600);
   align-items: center;
+  justify-content: flex-start;
 }
 
 .filters-field .unit-textfield--active .unit-textfield__field {
@@ -1363,7 +1525,9 @@ html,
   gap: var(--unit-space-200);
 }
 
-.filters-field .unit-textfield__field:not(.unit-textfield__field--split) > .icon:last-of-type {
+/* :last-child — не :last-of-type: для date range єдиний svg (календар) інакше був «останнім svg»
+ * і отримував margin-left:auto, зсуваючи вміст. Шеврон у select — останній нащадок. */
+.filters-field .unit-textfield__field:not(.unit-textfield__field--split) > .icon:last-child {
   margin-left: auto;
   flex-shrink: 0;
 }
@@ -1446,9 +1610,13 @@ html,
   width: 748px;
   height: 512px;
   background: var(--color-soft-100);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  /* Hairline via shadow so height:512 is full inner area (1px border steals 2px → body was 453 / 454). */
+  border: none;
   border-radius: var(--radius-lg);
-  box-shadow: 0px 6px 8px -6px rgba(0, 0, 0, 0.12), 0px 8px 16px -6px rgba(0, 0, 0, 0.08);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.08),
+    0px 6px 8px -6px rgba(0, 0, 0, 0.12),
+    0px 8px 16px -6px rgba(0, 0, 0, 0.08);
   overflow: hidden;
   opacity: 0;
   pointer-events: none;
@@ -1517,24 +1685,31 @@ html,
 }
 
 .df-calendar {
-  /* 748px popover − 180px presets (Figma column) */
+  /* 748px popover − 180px presets — two months (Figma 455:17017: 7×36px cells, 252px-wide grid) + gap + pad */
   flex: 0 0 568px;
   width: 568px;
   min-width: 0;
+  min-height: 0;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   background: var(--color-soft-100);
 }
 
+/* Figma calendar column: 456px content + 56px footer = 512px (no internal scroll). */
 .df-calendar__body {
-  flex: 1;
-  min-height: 0;
+  flex: 0 0 456px;
+  width: 568px;
+  height: 456px;
+  min-height: 456px;
+  max-height: 456px;
   display: flex;
   flex-direction: column;
   gap: var(--space-600);
   padding-bottom: 0;
   box-sizing: border-box;
+  overflow-x: hidden;
+  overflow-y: hidden;
 }
 
 /* Figma 455:16999 — months + date fields: vertical gap 16px; height hugs content */
@@ -1560,7 +1735,7 @@ html,
   display: flex;
   align-items: center;
   height: 24px;
-  padding: 0 var(--space-100);
+  padding: 0;
   font: var(--font-caption-normal);
   font-weight: var(--fw-medium);
   color: var(--color-dense-900);
@@ -1617,19 +1792,30 @@ html,
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--space-100);
   height: 24px;
   padding: 0 var(--space-200);
   box-sizing: border-box;
 }
 
 .df-month__title {
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
   font: var(--font-label-medium);
   color: var(--color-dense-900);
   font-feature-settings: var(--font-feature);
   white-space: nowrap;
 }
 
+.df-month__nav-spacer {
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+}
+
 .df-month__nav {
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1656,6 +1842,25 @@ html,
   transform: rotate(180deg);
 }
 
+.df-day--beyond-now {
+  opacity: 0.38;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Allowed interval — Before / After (Figma: fill accent/300, inside stroke soft/100, без тіней) */
+.df-day--zone-before:not(.df-day--outside),
+.df-day--zone-after:not(.df-day--outside) {
+  box-shadow: none;
+  border: 1px solid var(--unit-color-soft-100);
+  background: var(--unit-color-accent-300);
+}
+
+.df-day--zone-before:not(.df-day--outside):hover,
+.df-day--zone-after:not(.df-day--outside):hover {
+  background: var(--unit-color-accent-300);
+}
+
 .df-days {
   display: flex;
   flex-wrap: wrap;
@@ -1673,6 +1878,9 @@ html,
   padding: 0;
   border: none;
   border-radius: 6px;
+  box-sizing: border-box;
+  /* Inside stroke — unit Soft 100 / 1px (Figma day cell) */
+  box-shadow: inset 0 0 0 1px var(--unit-color-soft-100);
   background: var(--color-soft-100);
   color: var(--color-dense-900);
   font: var(--font-label-medium);
@@ -1690,12 +1898,34 @@ html,
 }
 
 .df-day--range {
-  background: var(--unit-color-accent-100);
+  background: var(--unit-color-accent-200);
 }
 
 .df-day--selected {
   background: var(--unit-color-accent-300);
   color: var(--color-dense-900);
+}
+
+/* Today marker — Unit UI Kit / Figma 7213:4994: 6×6px dot, inset 4px from top & right */
+.df-day--today::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  left: auto;
+  bottom: auto;
+  width: 6px;
+  height: 6px;
+  margin: 0;
+  border-radius: 50%;
+  background: var(--color-burgundy-700);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.df-day--today.df-day--selected::after,
+.df-day--today.df-day--range::after {
+  z-index: 2;
 }
 
 .df-date-fields {
@@ -1708,10 +1938,19 @@ html,
 
 .df-date-fields--single {
   gap: var(--space-400);
-  align-items: stretch;
+  align-items: center;
 }
 
-.df-date-fields--single > .df-date-field {
+.df-single-time-group {
+  display: flex;
+  flex: 0 0 252px;
+  width: 252px;
+  min-width: 0;
+  gap: var(--space-200);
+  align-items: center;
+}
+
+.df-single-time-group > .df-popover-textfield.unit-textfield {
   flex: 1 1 0;
   min-width: 0;
 }
@@ -1720,40 +1959,171 @@ html,
   gap: var(--space-400);
 }
 
-.df-date-fields--range > .df-date-field-group {
+.df-date-fields--range > .df-date-range-column {
   flex: 1 1 0;
   min-width: 0;
 }
 
-.df-date-fields--after,
-.df-date-fields--before {
-  align-items: flex-start;
-}
-
-.df-date-field-group {
+.df-date-range-column {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  flex: 1 1 0;
+}
+
+.df-date-range-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
   gap: var(--space-200);
+  width: auto;
+  max-width: 100%;
+  align-self: flex-start;
   min-width: 0;
 }
 
-.df-date-field-group--fixed {
+/* Date popover — Unit Textfield + segmented value (Figma Filters) */
+.df-popover .df-popover-textfield.unit-textfield {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* Fixed-width date column — must beat generic flex: 1 above or the row stretches (~276px vs Figma 252). */
+.df-popover .df-popover-textfield.df-popover-textfield--date-fixed.unit-textfield {
+  flex: 0 0 auto;
   width: 252px;
+  flex-shrink: 0;
+}
+
+.df-popover .df-popover-textfield .unit-textfield__label {
+  font: var(--font-caption-normal);
+  font-weight: var(--fw-medium);
+  line-height: 16px;
+  color: var(--color-dense-900);
+  letter-spacing: 0.12px;
+  font-feature-settings: var(--font-feature);
+}
+
+.df-popover-empty-label {
+  /* Block: inline-block kept baseline strut → ~19px row; Figma caption row = 16px */
+  display: block;
+  height: 16px;
+  min-height: 16px;
+  line-height: 16px;
+  font: var(--font-caption-normal);
+  letter-spacing: 0.12px;
+  width: 0;
+  overflow: hidden;
+  opacity: 0;
+  flex-shrink: 0;
+}
+
+/* Widths — Figma Filters file fyTKqJ4nUo7kBuC938jd2F:
+   • Single Date column 479:29833 — outline fills column; calendar strip uses 252px column next to times.
+   • Between 485:30974 — date outline 151px, time outline 93px, gap space-200 inside pair; gap space-400 between From/To.
+   • After / Before 485:31358 — date 252px, time 252px.
+   Between time mock shows HH:MM only (93px); Range mode omits second segments to match (packed values still use :00 seconds). */
+
+/* Between (Range): date + time per side — Figma 485:30974 */
+.df-popover .df-popover-textfield.df-popover-textfield--range-date.unit-textfield {
+  flex: 0 0 auto;
+  width: 151px;
+}
+
+.df-popover .df-popover-textfield.df-popover-textfield--range-time.unit-textfield {
+  flex: 0 0 auto;
+  width: 93px;
+}
+
+/* After / Before — Date + Time row matching Single widths (Figma 485:31358) */
+.df-popover .df-popover-textfield.df-popover-textfield--pair-datetime-time.unit-textfield {
+  flex: 0 0 auto;
+  width: 252px;
+}
+
+/* Date filter popover — layout vs segment glyphs:
+   • .unit-textfield__field — flex justify defaults to center only where no segmented date/time rule applies below.
+   • Segmented date/time Unit Textfields — field row MUST stay flex-start (icon + segments from the start):
+     --date-fixed, --range-date, --range-time, --pair-datetime-time, and Single-mode times inside .df-single-time-group.
+     Do not delete or “re-center” without design approval.
+   • .df-seg-date__inp / .df-seg-time__inp — text-align:center inside each segment is PRODUCT LOCK (see rule block below); do not switch to start/end alignment without approval. */
+.df-popover .unit-textfield__field {
+  min-width: 0;
+  justify-content: center;
+}
+
+.df-popover .df-popover-textfield.df-popover-textfield--date-fixed .unit-textfield__field,
+.df-popover .df-popover-textfield.df-popover-textfield--range-date .unit-textfield__field,
+.df-popover .df-popover-textfield.df-popover-textfield--range-time .unit-textfield__field,
+.df-popover .df-popover-textfield.df-popover-textfield--pair-datetime-time .unit-textfield__field,
+.df-popover .df-single-time-group > .df-popover-textfield.unit-textfield .unit-textfield__field {
+  justify-content: flex-start;
+}
+
+.df-popover .df-seg-date--embedded {
+  flex: 0 0 auto;
+  min-width: auto;
+  justify-content: center;
+}
+
+.df-popover .df-seg-time {
+  justify-content: center;
+}
+
+.df-popover .df-seg-time--embed-fill {
+  flex: 0 0 auto;
+  min-width: max-content;
   max-width: 100%;
+}
+
+.df-popover .df-seg-time .df-seg-time__inp {
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.df-popover .df-seg-time:not(.df-seg-time--embed-fill) {
   flex: 0 0 auto;
 }
 
-.df-date-field__inline {
-  display: flex;
-  align-items: stretch;
-  gap: var(--space-200);
-  width: 100%;
-  min-width: 0;
+/* PRODUCT LOCK — centered glyphs in segmented date / time (digit placeholders) */
+.df-popover .df-seg-date__inp,
+.df-popover .df-seg-time__inp {
+  font: var(--font-body-normal);
+  text-align: center;
 }
 
-.df-date-field__value--flex {
-  flex: 1 1 0;
-  min-width: 0;
+.df-popover .df-seg-date__inp:not(:placeholder-shown),
+.df-popover .df-seg-time__inp:not(:placeholder-shown) {
+  font: var(--font-label-medium);
+}
+
+.df-popover .df-seg-date__inp {
+  color: var(--color-dense-900);
+}
+
+.df-popover .df-seg-time__inp {
+  color: var(--color-dense-900);
+}
+
+.df-popover .df-seg-date.is-placeholder .df-seg-date__inp,
+.df-popover .df-seg-date__inp::placeholder,
+.df-popover .df-seg-time__inp::placeholder {
+  color: var(--color-dense-200);
+  font-weight: 400;
+}
+
+.df-popover .df-seg-date__sep,
+.df-popover .df-seg-time__sep {
+  color: var(--color-soft-800);
+}
+
+/* Model is 00:00:00 and user has not edited yet — same tone/weight as placeholders. */
+.df-popover .df-seg-time.df-seg-time--default-zero .df-seg-time__inp,
+.df-popover .df-seg-time.df-seg-time--default-zero .df-seg-time__inp:not(:placeholder-shown) {
+  font: var(--font-body-normal);
+  font-weight: var(--fw-normal);
+  color: var(--color-dense-200);
 }
 
 .df-date-field {
@@ -1776,28 +2146,99 @@ html,
   font-feature-settings: var(--font-feature);
 }
 
-/* Date / Time textfield surface (Figma 455:16759 / 17118 / 17718 / 18124) */
+/* Date / Time segmented controls — Unit Textfield–like states (shadow, hover, focus ring, error, disabled, active). */
 .df-date-field__value,
 .df-time-field {
+  position: relative;
+  z-index: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   height: var(--tf-height-sm);
-  border: 1px solid var(--color-soft-600);
   border-radius: var(--radius-md);
-  background: var(--color-soft-100);
-  color: var(--color-dense-900);
-  font: var(--font-label-medium);
-  font-feature-settings: var(--font-feature);
   box-sizing: border-box;
   padding: var(--tf-padding-y-sm) var(--tf-padding-x-sm);
   overflow: visible;
   cursor: text;
+  border: 1px solid var(--tf-border-default);
+  background: var(--color-soft-100);
+  color: var(--color-dense-900);
+  font: var(--font-label-medium);
+  font-feature-settings: var(--font-feature);
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 }
 
+.df-date-field__value::after,
+.df-time-field::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  z-index: 2;
+  box-sizing: border-box;
+  border-radius: calc(var(--radius-md) + 2px);
+  border: 2px solid var(--unit-color-accent-300);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.df-date-field__value:not(.df-date-field__value--disabled):not(.df-date-field__value--error):hover:not(:focus-within),
+.df-time-field:not(.df-time-field--disabled):not(.df-time-field--error):hover:not(:focus-within) {
+  border-color: var(--tf-border-hover);
+}
+
+.df-date-field__value:focus-within:not(.df-date-field__value--disabled),
+.df-date-field__value.df-date-field__value--active:not(.df-date-field__value--disabled),
+.df-time-field:focus-within:not(.df-time-field--disabled),
+.df-time-field.df-time-field--active:not(.df-time-field--disabled) {
+  border-color: var(--unit-color-accent-700);
+}
+
+.df-date-field__value:focus-within:not(.df-date-field__value--disabled)::after,
+.df-date-field__value.df-date-field__value--active:not(.df-date-field__value--disabled)::after,
+.df-time-field:focus-within:not(.df-time-field--disabled)::after,
+.df-time-field.df-time-field--active:not(.df-time-field--disabled)::after {
+  opacity: 1;
+}
+
+.df-date-field__value--error,
+.df-time-field--error {
+  border-color: var(--tf-border-error);
+}
+
+.df-date-field__value--error:hover:not(:focus-within),
+.df-time-field--error:hover:not(:focus-within) {
+  border-color: var(--tf-border-error);
+}
+
+.df-date-field__value--error:focus-within,
+.df-time-field--error:focus-within {
+  border-color: var(--tf-border-error);
+}
+
+.df-date-field__value--disabled,
+.df-time-field--disabled {
+  cursor: not-allowed;
+  box-shadow: none;
+  background: var(--color-dense-900-opacity-200);
+  border-color: var(--tf-border-default);
+}
+
+.df-date-field__value--disabled::after,
+.df-time-field--disabled::after {
+  display: none;
+}
+
+.df-date-field__value--disabled .df-seg-date__inp,
+.df-time-field--disabled .df-seg-time__inp {
+  color: var(--color-dense-400);
+}
+
+/* HH:mm:ss — 20+1+5+1+20+1+5+1+20 = 74px (Figma gap-px) */
 .df-time-field {
-  width: 73px;
-  flex: 0 0 73px;
+  width: 74px;
+  flex: 0 0 74px;
   color: var(--color-dense-200);
 }
 
@@ -1810,24 +2251,20 @@ html,
 /* Do not shrink below segment widths — was collapsing to “/ /” and “: :” in Single */
 .df-date-field__value > .df-seg-date,
 .df-time-field > .df-seg-time {
+  position: relative;
+  z-index: 1;
   flex: 0 0 auto;
   width: auto;
   min-width: max-content;
   max-width: 100%;
 }
 
-.df-date-fields--single > .df-date-field > .df-date-field__value,
-.df-date-fields--single > .df-date-field > .df-time-field.df-time-field--fill {
-  width: 100%;
-  align-self: stretch;
-}
-
-/* Date segments — Medium 500 digits, light "/" separators */
+/* Date segments — Medium 500 digits, light "/" separators (Figma 479:30307: gap-px + w-[90px]) */
 .df-seg-date {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 1px;
   flex-shrink: 0;
   box-sizing: border-box;
 }
@@ -1840,33 +2277,38 @@ html,
   font: var(--font-label-medium);
   color: var(--color-dense-900);
   text-align: center;
+  font-variant-numeric: tabular-nums;
   outline: none;
   box-sizing: border-box;
   line-height: var(--lh-300);
   font-feature-settings: var(--font-feature);
 }
 
+.df-seg-date__inp:placeholder-shown {
+  font-weight: var(--fw-normal);
+}
+
 .df-seg-date__inp--dd,
 .df-seg-date__inp--mm {
-  width: 22px;
-  min-width: 22px;
-  flex: 0 0 22px;
+  width: 20px;
+  min-width: 20px;
+  flex: 0 0 20px;
 }
 
 .df-seg-date__inp--yyyy {
-  width: 40px;
-  min-width: 40px;
-  flex: 0 0 40px;
+  width: 36px;
+  min-width: 36px;
+  flex: 0 0 36px;
 }
 
 .df-seg-date__inp::placeholder {
-  color: var(--color-soft-800);
+  color: var(--color-dense-200);
   font-weight: 400;
 }
 
 .df-seg-date__sep {
-  width: 8px;
-  flex: 0 0 8px;
+  width: 5px;
+  flex: 0 0 5px;
   text-align: center;
   font: var(--font-body-normal);
   color: var(--color-soft-800);
@@ -1875,12 +2317,12 @@ html,
   pointer-events: none;
 }
 
-/* Time segments — Regular 400 digits, color dense-200 (#8f8f8f) */
+/* Time segments — same weight/color pattern as date: placeholder faint, typed dense-900 + medium */
 .df-seg-time {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 1px;
   flex-shrink: 0;
   box-sizing: border-box;
 }
@@ -1888,27 +2330,45 @@ html,
 .df-seg-time__inp {
   border: none;
   background: transparent;
-  width: 22px;
-  min-width: 22px;
-  flex: 0 0 22px;
+  width: 20px;
+  min-width: 20px;
+  flex: 0 0 20px;
   margin: 0;
   padding: 0;
   font: var(--font-body-normal);
-  color: var(--color-dense-200);
+  color: var(--color-dense-900);
   text-align: center;
+  font-variant-numeric: tabular-nums;
   outline: none;
   box-sizing: border-box;
   line-height: var(--lh-300);
   font-feature-settings: var(--font-feature);
 }
 
+.df-seg-time__inp:not(:placeholder-shown) {
+  font: var(--font-label-medium);
+}
+
 .df-seg-time__inp::placeholder {
+  color: var(--color-dense-200);
+  font-weight: 400;
+}
+
+.df-seg-time__inp:placeholder-shown {
+  font-weight: var(--fw-normal);
+}
+
+/* Default time from model before first edit — looks like placeholders. */
+.df-seg-time.df-seg-time--default-zero .df-seg-time__inp,
+.df-seg-time.df-seg-time--default-zero .df-seg-time__inp:not(:placeholder-shown) {
+  font: var(--font-body-normal);
+  font-weight: var(--fw-normal);
   color: var(--color-dense-200);
 }
 
 .df-seg-time__sep {
-  width: 4px;
-  flex: 0 0 4px;
+  width: 5px;
+  flex: 0 0 5px;
   text-align: center;
   font: var(--font-body-normal);
   color: var(--color-dense-200);
@@ -1918,14 +2378,23 @@ html,
 }
 
 .df-footer {
+  position: relative;
+  z-index: 3;
   flex-shrink: 0;
+  align-self: stretch;
+  width: 100%;
   height: 56px;
+  min-height: 56px;
+  max-height: 56px;
   display: flex;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: flex-end;
   gap: var(--space-200);
-  padding: var(--space-300) var(--space-400);
+  padding: 0 var(--space-400);
   box-sizing: border-box;
+  background: var(--color-soft-100);
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .filters-customize {
@@ -2538,8 +3007,7 @@ button[data-slot="button"].filters-reset:disabled {
 
 .cf-filter-section__action {
   font: var(--font-caption-normal);
-  font-weight: 500;
-  color: var(--color-congress-blue-700);
+  color: var(--color-dense-200);
   letter-spacing: 0.12px;
   font-feature-settings: var(--font-feature);
   background: none;
@@ -2548,7 +3016,7 @@ button[data-slot="button"].filters-reset:disabled {
   padding: 0;
 }
 .cf-filter-section__action:hover {
-  color: var(--color-congress-blue-800);
+  color: var(--color-dense-600);
 }
 
 /* Hide section actions until header is hovered (or focused); skip on touch / no-hover */

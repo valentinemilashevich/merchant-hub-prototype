@@ -254,6 +254,8 @@
   --font-body-normal: var(--fw-normal) var(--fs-200) / var(--lh-200) var(--font-family);
   --font-body-medium: var(--fw-medium) var(--fs-200) / var(--lh-200) var(--font-family);
   --font-caption-normal: var(--fw-normal) var(--fs-100) / var(--lh-100) var(--font-family);
+  /* Figma text style: Sans Serif/Caption/Medium — 12/16, Inter weight 500 (“Ag Medium · 12/16” in UI) */
+  --font-caption-medium: var(--fw-medium) var(--fs-100) / var(--lh-100) var(--font-family);
   --font-feature: "cv06" 1, "cv05" 1, "case" 1;
 
   /* ── Figma kit `--unit-*` (inspect / Code Connect) — mirrors + rem scale ── */
