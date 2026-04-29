@@ -327,7 +327,7 @@
   color: var(--color-burgundy-800);
 }
 
-/* Optional trailing clear — icon button (filters toolbar, grid, Customize search, presets, …) */
+/* Optional trailing clear — Unit UI Kit trailing icon (Copy / clear parity: Figma 4213 — hover/pressed/focus/disabled). */
 .unit-textfield__clear {
   flex-shrink: 0;
   display: flex;
@@ -342,11 +342,36 @@
   background: transparent;
   color: var(--color-dense-500);
   cursor: pointer;
+  outline: none;
+  transition:
+    background-color 0.15s ease,
+    box-shadow 0.15s ease,
+    color 0.15s ease,
+    opacity 0.15s ease;
 }
 
-.unit-textfield__clear:hover {
+.unit-textfield__clear:focus-visible {
+  box-shadow: var(--outline-sm);
+}
+
+.unit-textfield__clear:hover:not(:disabled) {
   color: var(--color-dense-700);
-  background: var(--color-dense-900-opacity-100);
+  background: var(--color-dense-900-opacity-200);
+}
+
+.unit-textfield__clear:active:not(:disabled) {
+  background: var(--color-dense-900-opacity-300);
+}
+
+.unit-textfield__clear:disabled {
+  opacity: 0.32;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.unit-textfield__clear:disabled:hover,
+.unit-textfield__clear:disabled:active {
+  background: transparent;
 }
 
 .unit-textfield__clear svg {

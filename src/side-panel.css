@@ -1284,7 +1284,7 @@ html,
   border-radius: var(--radius-md);
   border-color: var(--color-dense-900-opacity-400);
   box-shadow: var(--shadow-sm);
-  padding: 0 var(--space-100);
+  padding: 0 var(--space-200);
   gap: var(--space-100);
 }
 

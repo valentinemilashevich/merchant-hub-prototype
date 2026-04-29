@@ -68,6 +68,7 @@ export function UnitTextfield({
             <button
               type="button"
               className="unit-textfield__clear"
+              disabled={disabled}
               aria-label={clearAriaLabel}
               onMouseDown={handleClearMouseDown}
               onClick={handleClearClick}
