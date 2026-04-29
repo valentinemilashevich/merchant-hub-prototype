@@ -134,7 +134,7 @@ const ALL_FILTERS = [
   { id: "arn-code",        label: "ARN code",         description: "Acquirer reference number",      kind: "text",   group: "Payment" },
 ];
 
-const FILTER_GROUP_ORDER = ["Order", "Date", "Transaction", "Payment", "Card", "Customer", "System"];
+const FILTER_GROUP_ORDER = ["Order", "Date", "Transaction", "Payment", "Customer", "System", "Card"];
 
 /** Always on the panel / in “Added”; no toggle — drag only to reorder. */
 const LOCKED_FILTER_IDS = new Set(["order-id", "email"]);
@@ -816,6 +816,35 @@ function constrainDraftSlice(mode, slice) {
   return slice;
 }
 
+/** Range → Single: calendar follows Range end (`to`); multi-day spans collapse onto `to`-day midnight → Range `timeTo`. */
+function singleDraftFromRangeSlice(rangeDraft) {
+  const rFrom = rangeDraft.fromDate;
+  const rTo = rangeDraft.toDate ?? rangeDraft.fromDate;
+  const baseDay = cloneDate(rTo ?? rFrom ?? startOfDay(new Date()));
+
+  const sodA = rFrom ? startOfDay(rFrom).getTime() : null;
+  const sodB = rTo ? startOfDay(rTo).getTime() : sodA;
+
+  let tf = normalizeToHms(rangeDraft.timeFrom);
+  let tt = normalizeToHms(rangeDraft.timeTo);
+  const sameCalendarDay =
+    sodA != null && sodB != null && sodA === sodB;
+  if (!sameCalendarDay) {
+    tf = normalizeToHms("00:00:00");
+    tt = normalizeToHms(rangeDraft.timeTo);
+  }
+
+  const vm = new Date(baseDay.getFullYear(), baseDay.getMonth(), 1);
+  return constrainDraftSlice("Single", {
+    fromDate: cloneDate(baseDay),
+    toDate: cloneDate(baseDay),
+    timeFrom: tf,
+    timeTo: tt,
+    visibleMonth: vm,
+    selectedPreset: null,
+  });
+}
+
 function createEmptyTabDraft(fromDate, toDate, timeFrom, timeTo) {
   const base = fromDate || toDate || startOfDay(new Date());
   const vm = new Date(base.getFullYear(), base.getMonth(), 1);
@@ -1432,6 +1461,15 @@ function DateFilterPopover({
     (nextMode) => {
       onModeChange?.(nextMode);
       setDraftsByMode((prev) => {
+        if (mode === "Range" && nextMode === "Single") {
+          const singleNext = singleDraftFromRangeSlice(prev.Range);
+          const out = { ...prev, Single: singleNext };
+          queueMicrotask(() => {
+            const { fromValue, toValue } = packDateDraftForFilter("Single", singleNext);
+            onLiveDraft?.(fromValue, toValue);
+          });
+          return out;
+        }
         const d = prev[nextMode];
         queueMicrotask(() => {
           const { fromValue, toValue } = packDateDraftForFilter(nextMode, d);
@@ -1440,7 +1478,7 @@ function DateFilterPopover({
         return prev;
       });
     },
-    [onModeChange, onLiveDraft]
+    [mode, onModeChange, onLiveDraft]
   );
 
   /* Sync drafts from filter values when external (e.g. reset) changes them.
@@ -1766,8 +1804,8 @@ function DateFilterPopover({
         <div className="df-calendar">
           <div className="df-calendar__body">
             <div className="df-mode">
-              <div className="df-mode__label">Date</div>
-              <div className="df-mode__group" role="tablist" aria-label="Date mode">
+              <div className="df-mode__label">Type</div>
+              <div className="df-mode__group" role="tablist" aria-label="Type">
                 {DATE_MODES.map((item) => (
                   <button
                     key={item}
@@ -2054,15 +2092,6 @@ function ToggleSwitch({ checked, onChange }) {
   );
 }
 
-/* ─── Arrow-down icon for "Available" header ─── */
-function ArrowDownIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-      <path d="M8 3.33v9.34M8 12.67l-3.33-3.34M8 12.67l3.33-3.34" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 /* ─── Customize Filters Popover ─── */
 function CustomizeFiltersPopover({
   anchorRef,
@@ -2078,7 +2107,6 @@ function CustomizeFiltersPopover({
   const [savingPreset, setSavingPreset] = useState(false);
   const [presetName, setPresetName] = useState("");
   const [presetNameError, setPresetNameError] = useState(null);
-  const [availableSort, setAvailableSort] = useState("asc"); // "asc" | "desc"
   const [previewIds, setPreviewIds] = useState(null); // live drag preview order
   const [draggingId, setDraggingId] = useState(null); // for CSS class during render
   const dragItemId = useRef(null);
@@ -2396,11 +2424,6 @@ function CustomizeFiltersPopover({
     // actual commit happens in handleDragEnd
   }, []);
 
-  /* ── Sort toggle for Available ── */
-  const toggleSort = useCallback(() => {
-    setAvailableSort((prev) => (prev === "asc" ? "desc" : "asc"));
-  }, []);
-
   /* Search: filter by name AND description */
   const q = searchQuery.trim().toLowerCase();
 
@@ -2430,8 +2453,7 @@ function CustomizeFiltersPopover({
     : availableFilters;
 
   const filteredAvailable = [...filteredAvailableUnsorted].sort((a, b) => {
-    const cmp = a.label.localeCompare(b.label);
-    return availableSort === "asc" ? cmp : -cmp;
+    return a.label.localeCompare(b.label);
   });
 
   const groupedAvailable = (() => {
@@ -2629,14 +2651,6 @@ function CustomizeFiltersPopover({
                       <div className="cf-filter-section__header">
                         <div className="cf-filter-section__title-with-icon">
                           <span className="cf-filter-section__title">Available</span>
-                          <button
-                            type="button"
-                            className={`cf-filter-section__sort-btn${availableSort === "desc" ? " cf-filter-section__sort-btn--desc" : ""}`}
-                            onClick={toggleSort}
-                            aria-label={availableSort === "asc" ? "Sort Z to A" : "Sort A to Z"}
-                          >
-                            <ArrowDownIcon />
-                          </button>
                         </div>
                         <button
                           type="button"

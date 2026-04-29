@@ -2933,6 +2933,8 @@ button[data-slot="button"].filters-reset:disabled {
   gap: var(--space-300);
   padding: 0 0 var(--space-400);
   scrollbar-width: none;
+  /* Sticky section rail height (from .cf-filter-section__header); group stickies offset below it */
+  --cf-sticky-section-rail-h: 28px;
 }
 .cf-filters-scroll::-webkit-scrollbar { display: none; }
 
@@ -2958,6 +2960,10 @@ button[data-slot="button"].filters-reset:disabled {
   padding-right: var(--space-100);
   width: 100%;
   box-sizing: border-box;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--color-soft-100);
 }
 
 .cf-filter-section__header {
@@ -3050,11 +3056,15 @@ button[data-slot="button"].filters-reset:disabled {
   gap: var(--space-100);
 }
 
-/* Figma 448:13255 — horizontal rail */
+/* Figma 448:13255 — horizontal rail; sticky under “Available” section header while scrolling groups */
 .cf-filter-group__name {
   padding-inline: var(--space-500);
   width: 100%;
   box-sizing: border-box;
+  position: sticky;
+  top: var(--cf-sticky-section-rail-h);
+  z-index: 4;
+  background: var(--color-soft-100);
 }
 
 /* Figma 448:13252 — inner padding around group label */
