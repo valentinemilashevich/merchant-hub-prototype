@@ -3638,7 +3638,7 @@ export default function App() {
                 role="region"
                 aria-label="Filters"
               >
-                <div className="filters-panel-fields">
+                <div className="filters-panel-fields" data-field-count={activePanelFilterIds.length}>
                   {activePanelFilterIds
                     .map((id) => ALL_FILTERS.find((x) => x.id === id))
                     .filter(Boolean)
