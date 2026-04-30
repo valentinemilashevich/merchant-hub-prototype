@@ -673,15 +673,19 @@ function constrainDraftSlice(mode, slice) {
   let tf = normalizeToHms(timeFrom);
   let tt = normalizeToHms(timeTo);
 
-  const capDayToPastOrPresent = (d) => {
+  const allowFuture = selectedPreset === "tomorrow";
+
+  const capDay = (d) => {
     if (!d) return null;
-    const sd = startOfDay(d);
-    if (sd > sodToday) return cloneDate(sodToday);
+    if (!allowFuture) {
+      const sd = startOfDay(d);
+      if (sd > sodToday) return cloneDate(sodToday);
+    }
     return cloneDate(d);
   };
 
   if (mode === "Single") {
-    let day = fromDate || toDate ? capDayToPastOrPresent(fromDate || toDate) : null;
+    let day = fromDate || toDate ? capDay(fromDate || toDate) : null;
     if (!day) day = cloneDate(sodToday);
     tf = normalizeToHms(tf);
     tt = normalizeToHms(tt);
@@ -700,20 +704,22 @@ function constrainDraftSlice(mode, slice) {
       A = combineDateAndTime(day, tf);
       B = combineDateAndTime(day, tt);
     }
-    const sodD = startOfDay(day);
-    if (sodD.getTime() === sodToday.getTime()) {
-      if (B > now) {
-        B = now;
-        tt = timeHmsFromDate(B);
-        A = combineDateAndTime(day, tf);
-      }
-      if (A > now) {
-        A = now;
-        tf = timeHmsFromDate(A);
-        B = combineDateAndTime(day, tt);
-        if (A > B) {
-          tt = tf;
-          B = new Date(A);
+    if (!allowFuture) {
+      const sodD = startOfDay(day);
+      if (sodD.getTime() === sodToday.getTime()) {
+        if (B > now) {
+          B = now;
+          tt = timeHmsFromDate(B);
+          A = combineDateAndTime(day, tf);
+        }
+        if (A > now) {
+          A = now;
+          tf = timeHmsFromDate(A);
+          B = combineDateAndTime(day, tt);
+          if (A > B) {
+            tt = tf;
+            B = new Date(A);
+          }
         }
       }
     }
@@ -729,8 +735,21 @@ function constrainDraftSlice(mode, slice) {
   }
 
   if (mode === "Range") {
-    let fd = capDayToPastOrPresent(fromDate) || cloneDate(sodToday);
-    let td = capDayToPastOrPresent(toDate) || cloneDate(sodToday);
+    let fd = capDay(fromDate);
+    let td = capDay(toDate);
+
+    if (!fd && !td) {
+      const vm = vmIn ?? new Date(sodToday.getFullYear(), sodToday.getMonth(), 1);
+      return { fromDate: null, toDate: null, timeFrom: tf, timeTo: tt, visibleMonth: vm, selectedPreset: selectedPreset ?? null };
+    }
+
+    if (fd && !td) {
+      tf = normalizeToHms(tf);
+      const vm = vmIn ?? new Date(fd.getFullYear(), fd.getMonth(), 1);
+      return { fromDate: fd, toDate: null, timeFrom: tf, timeTo: tt, visibleMonth: vm, selectedPreset: selectedPreset ?? null };
+    }
+
+    if (!fd) fd = cloneDate(td);
     if (startOfDay(fd).getTime() > startOfDay(td).getTime()) {
       const s = fd;
       fd = td;
@@ -754,9 +773,11 @@ function constrainDraftSlice(mode, slice) {
       msLo = msHi;
       msHi = s;
     }
-    const msNow = now.getTime();
-    msHi = Math.min(msHi, msNow);
-    msLo = Math.min(msLo, msHi);
+    if (!allowFuture) {
+      const msNow = now.getTime();
+      msHi = Math.min(msHi, msNow);
+      msLo = Math.min(msLo, msHi);
+    }
 
     const dLo = new Date(msLo);
     const dHi = new Date(msHi);
@@ -776,9 +797,9 @@ function constrainDraftSlice(mode, slice) {
   }
 
   if (mode === "Before") {
-    let d = capDayToPastOrPresent(toDate) || cloneDate(sodToday);
+    let d = capDay(toDate) || cloneDate(sodToday);
     let B = combineDateAndTime(d, tt);
-    if (B > now) {
+    if (!allowFuture && B > now) {
       B = now;
       d = cloneDate(startOfDay(B));
       tt = timeHmsFromDate(B);
@@ -795,9 +816,9 @@ function constrainDraftSlice(mode, slice) {
   }
 
   if (mode === "After") {
-    let d = capDayToPastOrPresent(fromDate) || cloneDate(sodToday);
+    let d = capDay(fromDate) || cloneDate(sodToday);
     let A = combineDateAndTime(d, tf);
-    if (A > now) {
+    if (!allowFuture && A > now) {
       A = now;
       d = cloneDate(startOfDay(A));
       tf = timeHmsFromDate(A);
@@ -869,6 +890,7 @@ function SegmentedDateInput({
   invalid = false,
   active = false,
   embedded = false,
+  blurExemptContainerRef,
 }) {
   const dRef = useRef(null);
   const mRef = useRef(null);
@@ -950,10 +972,15 @@ function SegmentedDateInput({
     else dRef.current?.focus();
   }, [dv, mv, yv]);
 
-  const handleBlur = useCallback((e) => {
-    if (e.currentTarget.contains(e.relatedTarget)) return;
-    commitIfValid();
-  }, [commitIfValid]);
+  const handleBlur = useCallback(
+    (e) => {
+      if (e.currentTarget.contains(e.relatedTarget)) return;
+      const rt = e.relatedTarget;
+      if (rt instanceof Node && blurExemptContainerRef?.current?.contains(rt)) return;
+      commitIfValid();
+    },
+    [commitIfValid, blurExemptContainerRef]
+  );
 
   const segClass = [
     "df-seg-date",
@@ -1192,6 +1219,7 @@ function SegmentedTimeInput({
   active = false,
   fill = false,
   embedded = false,
+  blurExemptContainerRef,
 }) {
   const hRef = useRef(null);
   const mRef = useRef(null);
@@ -1237,6 +1265,15 @@ function SegmentedTimeInput({
     setMv(nmi);
     setSv(ns);
   }, [onCommit, withSeconds]);
+
+  const commitFromBlur = useCallback(
+    (e) => {
+      const rt = e.relatedTarget;
+      if (rt instanceof Node && blurExemptContainerRef?.current?.contains(rt)) return;
+      commit();
+    },
+    [commit, blurExemptContainerRef]
+  );
 
   const applyTime = useCallback(
     (h, m, s) => {
@@ -1304,7 +1341,7 @@ function SegmentedTimeInput({
         disabled={disabled}
         onChange={(e) => onDigits(e.target.value, 2, setHv, mRef, hvRef)}
         onKeyDown={(e) => timeSegmentKeyDown(e, "h", timeKeyCtx)}
-        onBlur={commit}
+        onBlur={commitFromBlur}
       />
       <span className="df-seg-time__sep" aria-hidden>
         :
@@ -1321,7 +1358,7 @@ function SegmentedTimeInput({
         disabled={disabled}
         onChange={(e) => onDigits(e.target.value, 2, setMv, withSeconds ? sRef : null, mvRef)}
         onKeyDown={(e) => timeSegmentKeyDown(e, "m", timeKeyCtx)}
-        onBlur={commit}
+        onBlur={commitFromBlur}
       />
       {withSeconds ? (
         <>
@@ -1340,7 +1377,7 @@ function SegmentedTimeInput({
             disabled={disabled}
             onChange={(e) => onDigits(e.target.value, 2, setSv, null, svRef)}
             onKeyDown={(e) => timeSegmentKeyDown(e, "s", timeKeyCtx)}
-            onBlur={commit}
+            onBlur={commitFromBlur}
           />
         </>
       ) : null}
@@ -1439,6 +1476,7 @@ function DateFilterPopover({
   onClose,
 }) {
   const popoverRef = useRef(null);
+  const calendarMonthsRef = useRef(null);
   const fromParsed = parseDateTimeValue(values[field.fromId]);
   const toParsed = parseDateTimeValue(values[field.toId]);
   const initialFrom = fromParsed.date;
@@ -1698,7 +1736,13 @@ function DateFilterPopover({
       <div className="df-month">
         <div className="df-month__header">
           {showPrevNav ? (
-            <button type="button" className="df-month__nav" aria-label="Previous month" onClick={goPrevMonth}>
+            <button
+              type="button"
+              className="df-month__nav"
+              aria-label="Previous month"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={goPrevMonth}
+            >
               <SideIcon icon={ChevronLeftGlyph} />
             </button>
           ) : (
@@ -1706,7 +1750,13 @@ function DateFilterPopover({
           )}
           <span className="df-month__title">{monthLabel(monthDate)}</span>
           {showNextNav ? (
-            <button type="button" className="df-month__nav df-month__nav--next" aria-label="Next month" onClick={goNextMonth}>
+            <button
+              type="button"
+              className="df-month__nav df-month__nav--next"
+              aria-label="Next month"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={goNextMonth}
+            >
               <SideIcon icon={ChevronLeftGlyph} />
             </button>
           ) : (
@@ -1718,7 +1768,7 @@ function DateFilterPopover({
             const outside = day.getMonth() !== monthDate.getMonth();
             const sodDay = startOfDay(day);
             const sodNow = startOfDay(new Date());
-            const disallowFutureDates = ["Single", "Range", "Before", "After"].includes(mode);
+            const disallowFutureDates = selectedPreset !== "tomorrow" && ["Single", "Range", "Before", "After"].includes(mode);
             const isBeyondNow = disallowFutureDates && !outside && sodDay > sodNow;
 
             const selected = sameDay(day, fromDate) || sameDay(day, toDate);
@@ -1763,6 +1813,7 @@ function DateFilterPopover({
                 ]
                   .filter(Boolean)
                   .join(" ")}
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => handleDayClick(sodDay)}
               >
                 {day.getDate()}
@@ -1820,7 +1871,7 @@ function DateFilterPopover({
             </div>
 
             <div className="df-calendar__stack">
-              <div className="df-months">
+              <div className="df-months" ref={calendarMonthsRef}>
                 {renderMonth(visibleMonth, { showPrevNav: true, showNextNav: false })}
                 {renderMonth(addMonths(visibleMonth, 1), { showPrevNav: false, showNextNav: true })}
               </div>
@@ -1831,6 +1882,7 @@ function DateFilterPopover({
                   <CalendarGlyph className="icon" />
                   <SegmentedDateInput
                     embedded
+                    blurExemptContainerRef={calendarMonthsRef}
                     valueDate={fromDate || toDate}
                     placeholderDate={placeholderToday}
                     onCommitDate={(d) =>
@@ -1844,6 +1896,7 @@ function DateFilterPopover({
                     <ClockGlyph className="icon" />
                     <SegmentedTimeInput
                       embedded
+                      blurExemptContainerRef={calendarMonthsRef}
                       fill
                       withSeconds
                       valueHms={timeFrom}
@@ -1860,6 +1913,7 @@ function DateFilterPopover({
                     <ClockGlyph className="icon" />
                     <SegmentedTimeInput
                       embedded
+                      blurExemptContainerRef={calendarMonthsRef}
                       fill
                       withSeconds
                       valueHms={timeTo}
@@ -1877,6 +1931,7 @@ function DateFilterPopover({
                       <CalendarGlyph className="icon" />
                       <SegmentedDateInput
                         embedded
+                        blurExemptContainerRef={calendarMonthsRef}
                         valueDate={fromDate}
                         placeholderDate={placeholderToday}
                         onCommitDate={(d) => updateDraft({ fromDate: d })}
@@ -1892,6 +1947,7 @@ function DateFilterPopover({
                       <ClockGlyph className="icon" />
                       <SegmentedTimeInput
                         embedded
+                        blurExemptContainerRef={calendarMonthsRef}
                         fill
                         withSeconds={false}
                         valueHms={timeFrom}
@@ -1907,6 +1963,7 @@ function DateFilterPopover({
                       <CalendarGlyph className="icon" />
                       <SegmentedDateInput
                         embedded
+                        blurExemptContainerRef={calendarMonthsRef}
                         valueDate={toDate}
                         placeholderDate={placeholderTomorrow}
                         onCommitDate={(d) => updateDraft({ toDate: d })}
@@ -1922,6 +1979,7 @@ function DateFilterPopover({
                       <ClockGlyph className="icon" />
                       <SegmentedTimeInput
                         embedded
+                        blurExemptContainerRef={calendarMonthsRef}
                         fill
                         withSeconds={false}
                         valueHms={timeTo}
@@ -1938,6 +1996,7 @@ function DateFilterPopover({
                   <CalendarGlyph className="icon" />
                   <SegmentedDateInput
                     embedded
+                    blurExemptContainerRef={calendarMonthsRef}
                     valueDate={fromDate}
                     placeholderDate={placeholderToday}
                     onCommitDate={(d) => updateDraft({ fromDate: d })}
@@ -1948,6 +2007,7 @@ function DateFilterPopover({
                   <ClockGlyph className="icon" />
                   <SegmentedTimeInput
                     embedded
+                    blurExemptContainerRef={calendarMonthsRef}
                     fill
                     withSeconds
                     valueHms={timeFrom}
@@ -1962,6 +2022,7 @@ function DateFilterPopover({
                   <CalendarGlyph className="icon" />
                   <SegmentedDateInput
                     embedded
+                    blurExemptContainerRef={calendarMonthsRef}
                     valueDate={toDate}
                     placeholderDate={placeholderToday}
                     onCommitDate={(d) => updateDraft({ toDate: d })}
@@ -1972,6 +2033,7 @@ function DateFilterPopover({
                   <ClockGlyph className="icon" />
                   <SegmentedTimeInput
                     embedded
+                    blurExemptContainerRef={calendarMonthsRef}
                     fill
                     withSeconds
                     valueHms={timeTo}
