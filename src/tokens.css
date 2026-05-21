@@ -251,6 +251,7 @@
   /* Typography composites (Inter) */
   --font-family: "Inter", sans-serif;
   --font-label-medium: var(--fw-medium) var(--fs-200) / var(--lh-300) var(--font-family);
+  --font-label-normal: var(--fw-normal) var(--fs-200) / var(--lh-300) var(--font-family);
   --font-body-normal: var(--fw-normal) var(--fs-200) / var(--lh-200) var(--font-family);
   --font-body-medium: var(--fw-medium) var(--fs-200) / var(--lh-200) var(--font-family);
   --font-caption-normal: var(--fw-normal) var(--fs-100) / var(--lh-100) var(--font-family);

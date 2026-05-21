@@ -134,8 +134,6 @@ const ALL_FILTERS = [
   { id: "arn-code",        label: "ARN code",         description: "Acquirer reference number",      kind: "text",   group: "Payment" },
 ];
 
-const FILTER_GROUP_ORDER = ["Order", "Date", "Transaction", "Payment", "Customer", "System", "Card"];
-
 /** Always on the panel / in “Added”; no toggle — drag only to reorder. */
 const LOCKED_FILTER_IDS = new Set(["order-id", "email"]);
 
@@ -225,11 +223,6 @@ function validateFilterPanel(activeIds, draft, toolbarDraft) {
 
 const DEFAULT_PRESETS = [
   {
-    id: "finances",
-    label: "Finances",
-    filters: ["order-id", "amount", "currency", "status", "created", "updated"],
-  },
-  {
     id: "data-analytics",
     label: "Data analytics",
     filters: ["order-id", "channel", "status", "amount", "currency", "created"],
@@ -243,6 +236,11 @@ const DEFAULT_PRESETS = [
     id: "management",
     label: "Management",
     filters: ["order-id", "amount", "currency", "status", "channel"],
+  },
+  {
+    id: "development",
+    label: "Developement",
+    filters: ["order-id", "status", "channel", "created", "updated"],
   },
 ];
 
@@ -2089,11 +2087,22 @@ const FILTER_DRAG_GRIP_SVG_HTML =
   '<circle cx="6" cy="8" r="1" fill="currentColor"/><circle cx="10" cy="8" r="1" fill="currentColor"/>' +
   '<circle cx="6" cy="12" r="1" fill="currentColor"/><circle cx="10" cy="12" r="1" fill="currentColor"/></svg>';
 
-/* ─── Toggle switch (animates, then waits before list move / onChange) ─── */
-const TOGGLE_ANIM_MS = 220;
-const TOGGLE_MOVE_DELAY_MS = 180;
+/* ─── Switcher v3 (Figma 14113:10152) — animates, then waits before list move / onChange ─── */
+const SWITCHER_ANIM_MS = 220;
+const SWITCHER_MOVE_DELAY_MS = 180;
 
-function ToggleSwitch({ checked, onChange }) {
+const SWITCHER_TRACK_PATH =
+  "M0.333333 12C0.333333 8.13401 3.46734 5 7.33333 5H17.3333C21.1993 5 24.3333 8.13401 24.3333 12V12C24.3333 15.866 21.1993 19 17.3333 19H7.33333C3.46734 19 0.333333 15.866 0.333333 12V12Z";
+
+const SWITCHER_ON_SVG_HTML =
+  '<span class="cf-switcher-v3 cf-switcher-v3--on" aria-hidden="true">' +
+  '<svg class="cf-switcher-v3__svg" width="24" height="24" viewBox="0 0 24.3333 24" fill="none" aria-hidden="true">' +
+  `<path class="cf-switcher-v3__track" d="${SWITCHER_TRACK_PATH}"/>` +
+  '<g class="cf-switcher-v3__thumb-wrap">' +
+  '<circle class="cf-switcher-v3__thumb" cx="7.33333" cy="12" r="6"/>' +
+  "</g></svg></span>";
+
+function SwitcherV3({ checked, onChange, disabled = false }) {
   const [animating, setAnimating] = useState(null); // "on" | "off" | null
   const [heldVisual, setHeldVisual] = useState(null); // target checked while waiting to commit
   const timerRef = useRef(null);
@@ -2113,7 +2122,7 @@ function ToggleSwitch({ checked, onChange }) {
   }, [checked]);
 
   const handleClick = useCallback(() => {
-    if (timerRef.current || moveDelayRef.current || heldVisual !== null) return;
+    if (disabled || timerRef.current || moveDelayRef.current || heldVisual !== null) return;
     const direction = checked ? "off" : "on";
     const targetChecked = !checked;
     setAnimating(direction);
@@ -2124,9 +2133,9 @@ function ToggleSwitch({ checked, onChange }) {
       moveDelayRef.current = setTimeout(() => {
         moveDelayRef.current = null;
         onChange();
-      }, TOGGLE_MOVE_DELAY_MS);
-    }, TOGGLE_ANIM_MS);
-  }, [checked, onChange, heldVisual]);
+      }, SWITCHER_MOVE_DELAY_MS);
+    }, SWITCHER_ANIM_MS);
+  }, [checked, disabled, onChange, heldVisual]);
 
   useEffect(
     () => () => {
@@ -2137,19 +2146,36 @@ function ToggleSwitch({ checked, onChange }) {
   );
 
   const baseChecked = heldVisual !== null ? heldVisual : checked;
-  /* While animating, show the TARGET visual state; otherwise held or prop */
   const visual = animating ? animating === "on" : baseChecked;
-  const animClass = animating === "on" ? " cf-toggle--anim-on" : animating === "off" ? " cf-toggle--anim-off" : "";
 
   return (
     <button
       type="button"
       role="switch"
       aria-checked={visual}
-      className={`cf-toggle${visual ? " cf-toggle--on" : ""}${animClass}`}
+      disabled={disabled}
+      className={[
+        "cf-switcher-v3",
+        visual ? "cf-switcher-v3--on" : "",
+        disabled ? "cf-switcher-v3--disabled" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       onClick={handleClick}
     >
-      <span className="cf-toggle__thumb" />
+      <svg
+        className="cf-switcher-v3__svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24.3333 24"
+        fill="none"
+        aria-hidden="true"
+      >
+        <path className="cf-switcher-v3__track" d={SWITCHER_TRACK_PATH} />
+        <g className="cf-switcher-v3__thumb-wrap">
+          <circle className="cf-switcher-v3__thumb" cx="7.33333" cy="12" r="6" />
+        </g>
+      </svg>
     </button>
   );
 }
@@ -2408,6 +2434,10 @@ function CustomizeFiltersPopover({
       const rect = row.getBoundingClientRect();
       const label = row.querySelector(".cf-filter-row__label")?.textContent?.trim() ?? "";
       const desc = row.querySelector(".cf-filter-row__desc")?.textContent?.trim() ?? "";
+      const hasSwitcher = Boolean(row.querySelector(".cf-switcher-v3"));
+      const actionsHtml = hasSwitcher
+        ? `<div class="cf-filter-row-drag-layer__actions">${SWITCHER_ON_SVG_HTML}</div>`
+        : '<div class="cf-filter-row-drag-layer__actions" aria-hidden="true"></div>';
 
       const layer = document.createElement("div");
       layer.className = "cf-filter-row-drag-layer";
@@ -2418,7 +2448,9 @@ function CustomizeFiltersPopover({
         '<div class="cf-filter-row-drag-layer__text">',
         '<span class="cf-filter-row-drag-layer__label"></span>',
         '<span class="cf-filter-row-drag-layer__desc"></span>',
-        "</div></div>",
+        "</div>",
+        actionsHtml,
+        "</div>",
       ].join("");
       layer.querySelector(".cf-filter-row-drag-layer__label").textContent = label;
       layer.querySelector(".cf-filter-row-drag-layer__desc").textContent = desc;
@@ -2518,36 +2550,15 @@ function CustomizeFiltersPopover({
     return a.label.localeCompare(b.label);
   });
 
-  const groupedAvailable = (() => {
-    const groups = [];
-    const byGroup = new Map();
-    for (const f of filteredAvailable) {
-      const g = f.group || "Other";
-      if (!byGroup.has(g)) {
-        const entry = { group: g, items: [] };
-        byGroup.set(g, entry);
-        groups.push(entry);
-      }
-      byGroup.get(g).items.push(f);
-    }
-    groups.sort((a, b) => {
-      const ai = FILTER_GROUP_ORDER.indexOf(a.group);
-      const bi = FILTER_GROUP_ORDER.indexOf(b.group);
-      return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
-    });
-    return groups;
-  })();
-
   return (
     <div className={`cf-popover${positioned ? " cf-popover--visible" : ""}`} ref={popoverRef}>
       <div className="cf-popover__main">
         {/* ── Left: Presets + divider (full modal height) ── */}
         <div className="cf-presets">
           <div className="cf-presets-inner">
-            {/* Default presets */}
             <div className="cf-preset-group">
               <div className="cf-preset-heading">
-                <span className="cf-preset-heading__text cf-preset-heading__text--default">Presets</span>
+                <span className="cf-preset-heading__text">Presets</span>
               </div>
               <div className="cf-preset-list">
                 {DEFAULT_PRESETS.map((p) => (
@@ -2564,13 +2575,14 @@ function CustomizeFiltersPopover({
                       }
                     }}
                   >
-                    <span className="cf-preset-item__label">{p.label}</span>
+                    <div className="cf-preset-item__content">
+                      <span className="cf-preset-item__label">{p.label}</span>
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Personal presets */}
             {personalPresets.length > 0 && (
               <div className="cf-preset-group">
                 <div className="cf-preset-heading">
@@ -2591,7 +2603,9 @@ function CustomizeFiltersPopover({
                         }
                       }}
                     >
-                      <span className="cf-preset-item__label">{p.label}</span>
+                      <div className="cf-preset-item__content">
+                        <span className="cf-preset-item__label">{p.label}</span>
+                      </div>
                       <button
                         type="button"
                         className="cf-preset-item__delete"
@@ -2617,29 +2631,26 @@ function CustomizeFiltersPopover({
             <div className="cf-filters-stack">
               {/* Sticky header with gradient fade */}
               <div className="cf-filters-header">
-                <div className="cf-filters-header__content">
-                  <div className="cf-filters-heading">
-                    <span className="cf-filters-heading__text">Filters</span>
-                  </div>
-                  <UnitTextfield
-                    className={["filters-search-unit", "cf-filters-search"].join(" ")}
-                    clearable
-                    showClear={Boolean(searchQuery.trim())}
-                    onClear={() => setSearchQuery("")}
-                    clearAriaLabel="Clear search filter"
-                  >
+                <UnitTextfield
+                  className={["filters-search-unit", "cf-filters-search"].join(" ")}
+                  clearable
+                  showClear={Boolean(searchQuery.trim())}
+                  onClear={() => setSearchQuery("")}
+                  clearAriaLabel="Clear search filters"
+                >
+                  <span className="cf-filters-search__icon" aria-hidden>
                     <SideIcon icon={SearchGlyph} />
-                    <input
-                      type="search"
-                      placeholder="Search filter"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      autoComplete="off"
-                      spellCheck={false}
-                      aria-label="Search filter"
-                    />
-                  </UnitTextfield>
-                </div>
+                  </span>
+                  <input
+                    type="search"
+                    placeholder="Search filters"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    autoComplete="off"
+                    spellCheck={false}
+                    aria-label="Search filters"
+                  />
+                </UnitTextfield>
               </div>
 
               <div className="cf-filters-scroll">
@@ -2662,7 +2673,13 @@ function CustomizeFiltersPopover({
                       {filteredAdded.map((f) => (
                         <div
                           key={f.id}
-                          className={`cf-filter-row${draggingId === f.id ? " cf-filter-row--dragging" : ""}`}
+                          className={[
+                            "cf-filter-row",
+                            draggingId === f.id ? "cf-filter-row--dragging" : "",
+                            LOCKED_FILTER_IDS.has(f.id) ? "cf-filter-row--locked" : "",
+                          ]
+                            .filter(Boolean)
+                            .join(" ")}
                           draggable
                           onDragStart={(e) => handleDragStart(e, f.id)}
                           onDragEnd={handleDragEnd}
@@ -2696,9 +2713,13 @@ function CustomizeFiltersPopover({
                             <span className="cf-filter-row__desc">{f.description}</span>
                           </div>
                           {LOCKED_FILTER_IDS.has(f.id) ? (
-                            <div className="cf-filter-row__toggle-slot" aria-hidden />
+                            <div className="cf-filter-row__actions" aria-hidden>
+                              <div className="cf-filter-row__toggle-slot" />
+                            </div>
                           ) : (
-                            <ToggleSwitch checked={true} onChange={() => toggleFilter(f.id)} />
+                            <div className="cf-filter-row__actions">
+                              <SwitcherV3 checked={true} onChange={() => toggleFilter(f.id)} />
+                            </div>
                           )}
                         </div>
                       ))}
@@ -2723,27 +2744,20 @@ function CustomizeFiltersPopover({
                         </button>
                       </div>
                     </div>
-                    <div className="cf-filter-list cf-filter-list--by-group">
-                      {groupedAvailable.map((g) => (
-                        <div key={g.group} className="cf-filter-group">
-                          <div className="cf-filter-group__name">
-                            <div className="cf-filter-group__name-pad">
-                              <span className="cf-filter-group__name-text">{g.group}</span>
-                            </div>
+                    <div className="cf-filter-list">
+                      {filteredAvailable.map((f) => (
+                        <div key={f.id} className="cf-filter-row cf-filter-row--available">
+                          <div className="cf-filter-row__drag cf-filter-row__drag--empty" />
+                          <div className="cf-filter-row__info">
+                            <span className="cf-filter-row__label">{f.label}</span>
+                            <span className="cf-filter-row__desc">{f.description}</span>
                           </div>
-                          {g.items.map((f) => (
-                            <div key={f.id} className="cf-filter-row cf-filter-row--available">
-                              <div className="cf-filter-row__drag cf-filter-row__drag--empty" />
-                              <div className="cf-filter-row__info">
-                                <span className="cf-filter-row__label">{f.label}</span>
-                                <span className="cf-filter-row__desc">{f.description}</span>
-                              </div>
-                              <ToggleSwitch
-                                checked={false}
-                                onChange={() => toggleFilter(f.id)}
-                              />
-                            </div>
-                          ))}
+                          <div className="cf-filter-row__actions">
+                            <SwitcherV3
+                              checked={false}
+                              onChange={() => toggleFilter(f.id)}
+                            />
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -2808,8 +2822,8 @@ function CustomizeFiltersPopover({
               </div>
             ) : (
               <div className="cf-footer__actions">
-                <button type="button" className="cf-footer__btn cf-footer__btn--save" onClick={handleSavePreset}>
-                  Save as preset
+                <button type="button" className="cf-footer__btn cf-footer__btn--secondary" onClick={handleSavePreset}>
+                  Save preset
                 </button>
               </div>
             )}

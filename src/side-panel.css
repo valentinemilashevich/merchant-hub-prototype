@@ -711,7 +711,7 @@ body {
    ───────────────────────────────────────────── */
 .main-content {
   flex: 1;
-  background: #F5F5F5;
+  background: var(--color-soft-100);
   min-height: 0;
   overflow-y: auto;
   display: flex;
@@ -863,7 +863,8 @@ body {
 /* ── Table skeleton ── */
 .sk-table-wrap {
   background: #ffffff;
-  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-soft-500);
+  border-radius: var(--radius-md);
   overflow: hidden;
 }
 
@@ -1169,7 +1170,7 @@ html,
 
 /* Expanded panel: gray surface only (toolbar excluded); Figma 352:11985 — column gap 16 */
 .filters-panel {
-  background: var(--color-soft-200, #fafafa);
+  background-color: var(--color-soft-200);
   border-radius: var(--radius-md);
   width: 100%;
   min-width: 0;
@@ -1291,6 +1292,13 @@ html,
 .unit-textfield.filters-search-unit .unit-textfield__field input {
   padding-inline: var(--space-100);
   box-sizing: border-box;
+}
+
+/* Custom clear button only — hide native search-type clear */
+.unit-textfield.filters-search-unit .unit-textfield__field input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
 }
 
 /* Preset name: лише поле дає 4px від рамки — без дубля всередині input */
@@ -2702,7 +2710,7 @@ button[data-slot="button"].filters-reset:disabled {
 
 /* ═════════════════════════════════════════════
    Customize Filters Popover
-   Figma: Filters → node 397:58427
+   Figma: Unit UI Kit → presets 14244:85750
    ═════════════════════════════════════════════ */
 
 /* Popover shell — anchored to Customize button via fixed positioning */
@@ -2717,7 +2725,7 @@ button[data-slot="button"].filters-reset:disabled {
   flex-direction: column;
   overflow: hidden;
   width: 624px;
-  max-height: 520px;
+  height: 600px;
   /* Hidden until JS positions it */
   opacity: 0;
   pointer-events: none;
@@ -2751,7 +2759,7 @@ button[data-slot="button"].filters-reset:disabled {
   min-height: 0;
 }
 
-/* ── Left panel: Presets (column + border run to modal bottom) ── */
+/* ── Left panel: Presets (Figma 14244:85750, scrolled 14247:97887) ── */
 .cf-presets {
   width: 220px;
   flex-shrink: 0;
@@ -2769,51 +2777,45 @@ button[data-slot="button"].filters-reset:disabled {
 .cf-presets-inner {
   display: flex;
   flex-direction: column;
-  gap: var(--space-200);
 }
 
 .cf-preset-group {
   display: flex;
   flex-direction: column;
-  gap: var(--space-200);
 }
 
 .cf-preset-heading {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  height: 24px;
-  padding: 0 var(--space-200);
+  align-items: center;
+  height: 32px;
+  padding: var(--space-100) var(--space-200);
+  overflow: hidden;
 }
 
 .cf-preset-heading__text {
   font: var(--font-caption-normal);
-  font-weight: var(--fw-medium);
-  color: rgba(122, 122, 122, 1);
+  color: var(--color-dense-200);
   letter-spacing: 0.12px;
   white-space: nowrap;
   font-feature-settings: var(--font-feature);
 }
 
-.cf-preset-heading__text--default {
-  color: rgba(0, 0, 0, 1);
-}
-
 .cf-preset-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
 }
 
 .cf-preset-item {
   display: flex;
   align-items: center;
   gap: var(--space-100);
+  height: 32px;
   padding: var(--space-100) var(--space-200);
   border-radius: var(--radius-sm);
   cursor: pointer;
   user-select: none;
   overflow: hidden;
+  box-sizing: border-box;
 }
 .cf-preset-item:hover {
   background: var(--color-dense-900-opacity-200);
@@ -2825,10 +2827,17 @@ button[data-slot="button"].filters-reset:disabled {
   background: var(--color-soft-400);
 }
 
-.cf-preset-item__label {
+.cf-preset-item__content {
+  display: flex;
   flex: 1;
+  flex-direction: column;
+  justify-content: center;
   min-width: 0;
-  font: var(--font-label-medium);
+  padding: 2px 0;
+}
+
+.cf-preset-item__label {
+  font: var(--font-body-medium);
   color: var(--color-dense-900);
   font-feature-settings: var(--font-feature);
 }
@@ -2888,43 +2897,46 @@ button[data-slot="button"].filters-reset:disabled {
   flex-direction: column;
 }
 
-/* Sticky header — Figma 437:11912 (Filters file) */
+/* Sticky header — Figma 14244:85766 */
 .cf-filters-header {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  padding: var(--space-400) var(--space-600) var(--space-300) var(--space-400);
-  margin-bottom: 0px;
+  padding: var(--space-400) var(--space-500);
   position: relative;
   z-index: 1;
-  background: linear-gradient(
-    to bottom,
-    #ffffff 0%,
-    rgba(255, 255, 255, 0) 100%
-  );
+  background: var(--color-soft-100);
+  border-bottom: 1px solid var(--color-dense-900-opacity-200);
 }
 
-.cf-filters-header__content {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-200);
-  padding-inline-start: var(--space-400);
+.cf-filters-search.unit-textfield.filters-search-unit .unit-textfield__outline {
+  box-shadow: none;
 }
 
-.cf-filters-heading {
+.cf-filters-search.unit-textfield.filters-search-unit .unit-textfield__field {
+  padding: var(--space-100);
+  gap: var(--space-100);
+}
+
+.cf-filters-search__icon {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
   height: 24px;
 }
 
-.cf-filters-heading__text {
-  font: var(--font-caption-normal);
-  font-weight: var(--fw-medium);
-  color: var(--color-dense-900);
-  letter-spacing: 0.12px;
-  white-space: nowrap;
+.cf-filters-search.unit-textfield.filters-search-unit .unit-textfield__field input {
+  padding: 0 var(--space-100);
+  height: 24px;
+  line-height: 24px;
+  font: var(--font-label-normal);
   font-feature-settings: var(--font-feature);
+  text-align: left;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 /* Popover filter search uses .filters-search-unit (see toolbar block) */
@@ -2940,31 +2952,27 @@ button[data-slot="button"].filters-reset:disabled {
   gap: var(--space-300);
   padding: 0 0 var(--space-400);
   scrollbar-width: none;
-  /* Sticky section rail height (from .cf-filter-section__header); group stickies offset below it */
-  --cf-sticky-section-rail-h: 28px;
+  /* Sticky section rail height (from .cf-filter-section__header-rail) */
+  --cf-sticky-section-rail-h: 40px;
 }
 .cf-filters-scroll::-webkit-scrollbar { display: none; }
 
-/* Section: Added / Available — Figma 437:11801 / 437:11840 */
+/* Section: Added / Available — Figma 14244:85775 / 14244:85785 */
 .cf-filter-section {
   display: flex;
   flex-direction: column;
-  gap: var(--space-100);
-  padding-left: var(--space-100);
-  padding-right: var(--space-500);
-  border-top: 0 none transparent;
+  gap: 0;
+  padding-bottom: var(--space-400);
+  border-top: 1px solid var(--color-dense-900-opacity-200);
   box-sizing: border-box;
 }
 
 .cf-filter-section--available {
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
-  padding-top: var(--space-200);
+  padding-top: 0;
 }
 
-/* Figma 448:13271 — extra inset so row headers align vs list rows */
 .cf-filter-section__header-rail {
-  padding-left: var(--space-500);
-  padding-right: var(--space-100);
+  padding: var(--space-300) var(--space-500);
   width: 100%;
   box-sizing: border-box;
   position: sticky;
@@ -2977,15 +2985,16 @@ button[data-slot="button"].filters-reset:disabled {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 28px;
+  gap: var(--space-300);
   box-sizing: border-box;
-  padding: var(--space-200) var(--space-100) var(--space-100);
+  padding: 0;
 }
 
 .cf-filter-section__title {
+  flex: 1;
+  min-width: 0;
   font: var(--font-caption-normal);
-  font-weight: var(--fw-medium);
-  color: var(--color-dense-900);
+  color: var(--color-dense-200);
   letter-spacing: 0.12px;
   font-feature-settings: var(--font-feature);
 }
@@ -3019,6 +3028,7 @@ button[data-slot="button"].filters-reset:disabled {
 }
 
 .cf-filter-section__action {
+  flex-shrink: 0;
   font: var(--font-caption-normal);
   color: var(--color-dense-200);
   letter-spacing: 0.12px;
@@ -3027,28 +3037,23 @@ button[data-slot="button"].filters-reset:disabled {
   border: none;
   cursor: pointer;
   padding: 0;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 100ms ease, color 100ms ease;
+}
+.cf-filter-section:hover .cf-filter-section__action,
+.cf-filter-section__action:focus-visible {
+  opacity: 1;
 }
 .cf-filter-section__action:hover {
-  color: var(--color-dense-600);
-}
-
-/* Hide section actions until header is hovered (or focused); skip on touch / no-hover */
-@media (hover: hover) and (pointer: fine) {
-  .cf-filter-section__header .cf-filter-section__action {
-    opacity: 0;
-    transition: opacity 150ms ease;
-  }
-  .cf-filter-section__header:hover .cf-filter-section__action,
-  .cf-filter-section__header:focus-within .cf-filter-section__action {
-    opacity: 1;
-  }
+  color: var(--color-dense-900);
 }
 
 /* Filter row */
 .cf-filter-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-100);
+  gap: 0;
 }
 
 /* Available: gap between filter groups — Figma 437:11847 */
@@ -3063,9 +3068,9 @@ button[data-slot="button"].filters-reset:disabled {
   gap: var(--space-100);
 }
 
-/* Figma 448:13255 — horizontal rail; sticky under “Available” section header while scrolling groups */
 .cf-filter-group__name {
-  padding-inline: var(--space-500);
+  padding-left: var(--space-500);
+  padding-right: var(--space-500);
   width: 100%;
   box-sizing: border-box;
   position: sticky;
@@ -3076,7 +3081,7 @@ button[data-slot="button"].filters-reset:disabled {
 
 /* Figma 448:13252 — inner padding around group label */
 .cf-filter-group__name-pad {
-  padding: var(--space-200) var(--space-100) var(--space-100);
+  padding: var(--space-300) 0 var(--space-100);
   box-sizing: border-box;
 }
 
@@ -3089,49 +3094,90 @@ button[data-slot="button"].filters-reset:disabled {
   white-space: nowrap;
 }
 
+/* Filter row — List Item v2 states (Figma 13859:1859) */
 .cf-filter-row {
   display: flex;
   align-items: flex-start;
-  gap: var(--space-200);
-  padding: var(--space-100) var(--space-200) var(--space-100) var(--space-100);
-  border-radius: var(--radius-sm);
-  background: var(--color-soft-100);
-  transition: opacity 150ms ease;
+  gap: var(--space-100);
+  padding: var(--space-100) var(--space-500) var(--space-100) var(--space-100);
+  border-radius: 0;
+  background: transparent;
+  transition: background-color 150ms ease;
 }
 
 .cf-filter-row__drag {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
   padding: var(--space-100) 0;
   flex-shrink: 0;
   width: 16px;
   cursor: grab;
 }
+.cf-filter-row__drag:not(.cf-filter-row__drag--empty) {
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .cf-filter-row:not(.cf-filter-row--available):hover .cf-filter-row__drag:not(.cf-filter-row__drag--empty) {
+    opacity: 1;
+  }
+}
+.cf-filter-row:not(.cf-filter-row--available):focus-within .cf-filter-row__drag:not(.cf-filter-row__drag--empty) {
+  opacity: 1;
+}
 .cf-filter-row__drag svg {
   color: var(--color-dense-200);
+  transition: color 150ms ease;
 }
 .cf-filter-row__drag--empty {
   cursor: default;
   visibility: hidden;
 }
 
-/* Added rows: drag handle only on row hover/focus (fine pointer); touch keeps it visible */
-@media (hover: hover) and (pointer: fine) {
-  .cf-filter-row:not(.cf-filter-row--available) .cf-filter-row__drag:not(.cf-filter-row__drag--empty) {
-    opacity: 0;
-    transition: opacity 150ms ease;
-  }
-  .cf-filter-row:not(.cf-filter-row--available):hover .cf-filter-row__drag:not(.cf-filter-row__drag--empty),
-  .cf-filter-row:not(.cf-filter-row--available):focus-within .cf-filter-row__drag:not(.cf-filter-row__drag--empty) {
-    opacity: 1;
-  }
+/* Default — row description at rest */
+.cf-filter-row__desc {
+  color: var(--color-dense-300);
 }
 
-/* Під час DnD курсор часто над іншим рядком — не показувати там ручку (перебиває :hover) */
+/* Disabled — locked filters (Order ID, Email) at rest */
+.cf-filter-row--locked {
+  background: transparent;
+}
+.cf-filter-row--locked .cf-filter-row__desc {
+  color: var(--color-dense-300);
+}
+.cf-filter-row--locked .cf-filter-row__drag svg {
+  color: var(--color-dense-200);
+}
+
+/* Hover / focus — all rows including locked (Figma List Item v2: Hover) */
+@media (hover: hover) and (pointer: fine) {
+  .cf-filter-row:hover {
+    background: var(--color-dense-900-opacity-100);
+  }
+  .cf-filter-row:hover .cf-filter-row__desc {
+    color: var(--color-dense-900);
+  }
+  .cf-filter-row:not(.cf-filter-row--available):hover .cf-filter-row__drag svg {
+    color: var(--color-dense-900);
+  }
+}
+.cf-filter-row:focus-within {
+  background: var(--color-dense-900-opacity-100);
+}
+.cf-filter-row:focus-within .cf-filter-row__desc {
+  color: var(--color-dense-900);
+}
+.cf-filter-row:not(.cf-filter-row--available):focus-within .cf-filter-row__drag svg {
+  color: var(--color-dense-900);
+}
+
+/* Під час DnD не показувати ручку на інших added-рядках */
 .cf-filter-list:has(.cf-filter-row--dragging)
   .cf-filter-row:not(.cf-filter-row--dragging):not(.cf-filter-row--available)
   .cf-filter-row__drag:not(.cf-filter-row__drag--empty) {
-  opacity: 0 !important;
   pointer-events: none;
 }
 
@@ -3140,108 +3186,132 @@ button[data-slot="button"].filters-reset:disabled {
   min-width: 0;
   display: flex;
   flex-direction: column;
+  gap: 2px;
+  padding: 2px 0;
+}
+
+.cf-filter-row__actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  align-self: center;
+  width: 24px;
+  height: 24px;
 }
 
 .cf-filter-row__label {
-  font: var(--font-label-medium);
+  font: var(--font-body-medium);
   color: var(--color-dense-900);
-  line-height: 24px;
   font-feature-settings: var(--font-feature);
 }
 
 .cf-filter-row__desc {
   font: var(--font-caption-normal);
-  color: var(--color-dense-300);
   letter-spacing: 0.12px;
   line-height: 16px;
   font-feature-settings: var(--font-feature);
+  transition: color 150ms ease;
 }
 
-/* Locked filters: keep column width where toggle was removed */
+/* Locked filters: keep column width where switcher was removed */
 .cf-filter-row__toggle-slot {
   flex-shrink: 0;
   width: 24px;
-  height: 12px;
-  margin-top: 6px;
+  height: 24px;
 }
 
-/* ── Toggle switch ── */
-.cf-toggle {
-  position: relative;
+/* ── Switcher v3 (Figma 14113:10152) ── */
+.cf-switcher-v3 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 24px;
-  height: 12px;
-  flex-shrink: 0;
-  margin-top: 6px; /* center with first line of label */
-  border: none;
-  border-radius: 6px;
-  background: var(--color-soft-600);
-  cursor: pointer;
+  height: 24px;
   padding: 0;
-  transition: background 200ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-.cf-toggle--on {
-  background: var(--color-dense-900);
-}
-
-.cf-toggle__thumb {
-  position: absolute;
-  top: 1px;
-  left: 1px;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--color-soft-100);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
-}
-.cf-toggle--on .cf-toggle__thumb {
-  left: 13px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
 }
 
-/* Only animate when explicitly toggling (class added/removed by JS) */
-.cf-toggle--anim-on .cf-toggle__thumb {
-  animation: cf-thumb-on 220ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
-.cf-toggle--anim-off .cf-toggle__thumb {
-  animation: cf-thumb-off 220ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+.cf-switcher-v3__svg {
+  display: block;
+  overflow: visible;
 }
 
-@keyframes cf-thumb-on {
-  0%   { left: 1px;  transform: scaleX(1); }
-  40%  { transform: scaleX(1.15); }
-  100% { left: 13px; transform: scaleX(1); }
-}
-@keyframes cf-thumb-off {
-  0%   { left: 13px; transform: scaleX(1); }
-  40%  { transform: scaleX(1.15); }
-  100% { left: 1px;  transform: scaleX(1); }
+.cf-switcher-v3__track {
+  fill: var(--color-soft-800);
+  transition: fill 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Drag and drop states */
+.cf-switcher-v3--on .cf-switcher-v3__track {
+  fill: var(--color-dense-900);
+}
+
+.cf-switcher-v3:not(.cf-switcher-v3--disabled):not(.cf-switcher-v3--on):hover .cf-switcher-v3__track {
+  fill: var(--color-soft-900);
+}
+
+.cf-switcher-v3--on:not(.cf-switcher-v3--disabled):hover .cf-switcher-v3__track {
+  fill: var(--color-dense-700);
+}
+
+.cf-switcher-v3:focus-visible {
+  box-shadow: var(--outline-sm);
+}
+
+.cf-switcher-v3--disabled {
+  opacity: 0.32;
+  cursor: default;
+}
+
+.cf-switcher-v3__thumb-wrap {
+  transition: transform 220ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.cf-switcher-v3--on .cf-switcher-v3__thumb-wrap {
+  transform: translateX(9.67px);
+}
+
+.cf-switcher-v3__thumb {
+  fill: var(--color-soft-100);
+  filter: drop-shadow(0 1.33px 2.67px rgba(0, 0, 0, 0.12));
+}
+
+/* Drag — List Item v2 drag state (Figma 13859:1885) */
 .cf-filter-row--dragging {
-  background: var(--color-soft-300);
-  height: 48px;
+  background: var(--color-soft-200);
+  min-height: 50px;
+  border-radius: 0;
+  box-shadow: none;
 }
 .cf-filter-row--dragging > * {
   visibility: hidden;
 }
 
-/* Плаваючий шар, що рухається з курсором (ручка + текст; не слот у списку) */
+/* Floating drag preview — same drag-state surface as the list item */
 .cf-filter-row-drag-layer {
-  background: var(--color-soft-100);
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  border-radius: var(--radius-sm);
-  box-shadow: 0px 6px 8px -6px rgba(0, 0, 0, 0.12), 0px 8px 16px -6px rgba(0, 0, 0, 0.08);
+  background: var(--color-soft-200);
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
 }
 .cf-filter-row-drag-layer__inner {
   display: flex;
   align-items: flex-start;
-  gap: var(--space-200);
-  padding: var(--space-100) var(--space-200) var(--space-100) var(--space-100);
+  gap: var(--space-100);
+  padding: var(--space-100) var(--space-500) var(--space-100) var(--space-100);
   box-sizing: border-box;
 }
 .cf-filter-row-drag-layer__grip {
   flex-shrink: 0;
   width: 16px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: var(--space-100) 0;
   color: var(--color-dense-900);
   line-height: 0;
@@ -3251,19 +3321,35 @@ button[data-slot="button"].filters-reset:disabled {
   min-width: 0;
   display: flex;
   flex-direction: column;
+  gap: 2px;
+  padding: 2px 0;
 }
 .cf-filter-row-drag-layer__label {
-  font: var(--font-label-medium);
+  font: var(--font-body-medium);
   color: var(--color-dense-900);
-  line-height: 24px;
   font-feature-settings: var(--font-feature);
 }
 .cf-filter-row-drag-layer__desc {
   font: var(--font-caption-normal);
-  color: var(--color-dense-300);
+  color: var(--color-dense-900);
   letter-spacing: 0.12px;
   line-height: 16px;
   font-feature-settings: var(--font-feature);
+}
+.cf-filter-row-drag-layer__actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  align-self: center;
+  width: 24px;
+  height: 24px;
+}
+.cf-filter-row-drag-layer__actions .cf-switcher-v3 {
+  pointer-events: none;
+}
+.cf-filter-row-drag-layer .cf-switcher-v3__thumb {
+  filter: none;
 }
 
 /* Під час DnD плаваючий шар має pointer-events: none — курсор береться з елементів під ним.
@@ -3288,8 +3374,8 @@ html.cf-filter-dnd-active * {
   width: 100%;
   box-sizing: border-box;
   background: var(--color-soft-100);
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
-  padding: var(--space-300) var(--space-400);
+  border-top: 1px solid var(--color-dense-900-opacity-200);
+  padding: var(--space-400) var(--space-500);
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -3356,10 +3442,10 @@ html.cf-filter-dnd-active * {
 }
 
 .cf-footer__btn--secondary {
-  border: 1px solid rgba(0, 0, 0, 0.12);
+  border: 1px solid var(--color-dense-900-opacity-400);
   background: var(--color-soft-100);
   color: var(--color-dense-900);
-  box-shadow: 0px 2px 4px -2px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--shadow-sm);
 }
 .cf-footer__btn--secondary:hover:not(:disabled) {
   background: var(--color-soft-300);
