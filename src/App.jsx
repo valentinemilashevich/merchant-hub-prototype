@@ -2199,6 +2199,7 @@ function CustomizeFiltersPopover({
   const [draggingId, setDraggingId] = useState(null); // for CSS class during render
   const dragItemId = useRef(null);
   const dragLayerRef = useRef(null);
+  const dragOffsetRef = useRef({ x: 0, y: 0 });
   const dragMoveCleanupRef = useRef(null);
   const popoverRef = useRef(null);
   const presetInputRef = useRef(null);
@@ -2457,34 +2458,38 @@ function CustomizeFiltersPopover({
 
       const ox = e.clientX - rect.left;
       const oy = e.clientY - rect.top;
+      dragOffsetRef.current = { x: ox, y: oy };
 
       Object.assign(layer.style, {
         position: "fixed",
-        left: "-9999px",
-        top: "0",
+        left: `${e.clientX - ox}px`,
+        top: `${e.clientY - oy}px`,
         width: `${rect.width}px`,
         zIndex: "10050",
         pointerEvents: "none",
         boxSizing: "border-box",
       });
       document.body.appendChild(layer);
-      void layer.offsetHeight;
       dragLayerRef.current = layer;
 
+      const hide = new Image();
+      hide.src =
+        "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
       try {
-        e.dataTransfer.setDragImage(layer, ox, oy);
+        e.dataTransfer.setDragImage(hide, 0, 0);
       } catch {
-        const hide = new Image();
-        hide.src =
-          "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
-        try {
-          e.dataTransfer.setDragImage(hide, 0, 0);
-        } catch {
-          /* ignore */
-        }
+        /* ignore */
       }
 
-      dragMoveCleanupRef.current = null;
+      const onDrag = (ev) => {
+        const el = dragLayerRef.current;
+        if (!el) return;
+        if (ev.clientX === 0 && ev.clientY === 0) return;
+        el.style.left = `${ev.clientX - dragOffsetRef.current.x}px`;
+        el.style.top = `${ev.clientY - dragOffsetRef.current.y}px`;
+      };
+      row.addEventListener("drag", onDrag);
+      dragMoveCleanupRef.current = () => row.removeEventListener("drag", onDrag);
 
       setDraggingId(filterId);
       setPreviewIds((prev) => prev ?? [...activeFilterIds]);

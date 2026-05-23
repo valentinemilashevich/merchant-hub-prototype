@@ -3174,10 +3174,32 @@ button[data-slot="button"].filters-reset:disabled {
   color: var(--color-dense-900);
 }
 
+/* Під час DnD не показувати hover/focus на інших рядках (курсор проходить крізь drag-layer) */
+html.cf-filter-dnd-active .cf-filter-row:not(.cf-filter-row--dragging):hover,
+html.cf-filter-dnd-active .cf-filter-row:not(.cf-filter-row--dragging):focus-within {
+  background: transparent;
+}
+html.cf-filter-dnd-active .cf-filter-row:not(.cf-filter-row--dragging):hover .cf-filter-row__desc,
+html.cf-filter-dnd-active .cf-filter-row:not(.cf-filter-row--dragging):focus-within .cf-filter-row__desc {
+  color: var(--color-dense-300);
+}
+html.cf-filter-dnd-active
+  .cf-filter-row:not(.cf-filter-row--dragging):not(.cf-filter-row--available):hover
+  .cf-filter-row__drag:not(.cf-filter-row__drag--empty) svg,
+html.cf-filter-dnd-active
+  .cf-filter-row:not(.cf-filter-row--dragging):not(.cf-filter-row--available):focus-within
+  .cf-filter-row__drag:not(.cf-filter-row__drag--empty) svg {
+  color: var(--color-dense-200);
+}
+
 /* Під час DnD не показувати ручку на інших added-рядках */
 .cf-filter-list:has(.cf-filter-row--dragging)
   .cf-filter-row:not(.cf-filter-row--dragging):not(.cf-filter-row--available)
+  .cf-filter-row__drag:not(.cf-filter-row__drag--empty),
+html.cf-filter-dnd-active
+  .cf-filter-row:not(.cf-filter-row--dragging):not(.cf-filter-row--available)
   .cf-filter-row__drag:not(.cf-filter-row__drag--empty) {
+  opacity: 0 !important;
   pointer-events: none;
 }
 
@@ -3280,18 +3302,15 @@ button[data-slot="button"].filters-reset:disabled {
   filter: drop-shadow(0 1.33px 2.67px rgba(0, 0, 0, 0.12));
 }
 
-/* Drag — List Item v2 drag state (Figma 13859:1885) */
+/* Drag — in-list slot stays empty; preview follows cursor */
 .cf-filter-row--dragging {
-  background: var(--color-soft-200);
-  min-height: 50px;
-  border-radius: 0;
-  box-shadow: none;
+  background: transparent;
 }
 .cf-filter-row--dragging > * {
   visibility: hidden;
 }
 
-/* Floating drag preview — same drag-state surface as the list item */
+/* Floating drag preview — List Item v2 Drag (Figma 13859:1885) */
 .cf-filter-row-drag-layer {
   background: var(--color-soft-200);
   border: none;
