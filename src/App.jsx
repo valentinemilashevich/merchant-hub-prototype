@@ -247,23 +247,25 @@ const DEFAULT_PRESETS = [
 const DATE_PRESETS = [
   { id: "today", label: "Today" },
   { id: "yesterday", label: "Yesterday" },
-  { id: "tomorrow", label: "Tomorrow" },
   { id: "last-7-days", label: "Last 7 days" },
   { id: "last-30-days", label: "Last 30 days" },
   { id: "all-time", label: "All time" },
+  { id: "30-minutes", label: "30 minutes" },
+  { id: "1-hour", label: "1 hour" },
 ];
 
 /** Choosing these presets switches the date filter tab to Range (rolling window or open range). */
 const PRESETS_THAT_FORCE_RANGE = new Set(["last-7-days", "last-30-days", "all-time"]);
 /** Day presets: switch the date filter tab to Single (one calendar day). */
-const PRESETS_THAT_FORCE_SINGLE = new Set(["today", "yesterday", "tomorrow"]);
+const PRESETS_THAT_FORCE_SINGLE = new Set(["today", "yesterday", "30-minutes", "1-hour"]);
+
+const DATE_MODE_PRIMARY = ["Single", "Range"];
+const DATE_MODE_SECONDARY = ["Before", "After"];
 
 /** Years of rolling history for “All time” (prototype; replace with section limits later). */
 const ALL_TIME_RANGE_YEARS_BACK = 2;
 /** Exact day-count lookback from today (not same calendar date N years ago). */
 const ALL_TIME_LOOKBACK_DAYS = 365 * ALL_TIME_RANGE_YEARS_BACK;
-
-const DATE_MODES = ["Single", "Range", "Before", "After"];
 
 function startOfDay(date) {
   const d = new Date(date);
@@ -311,14 +313,70 @@ function focusInputCaret(ref, position) {
   });
 }
 
+/** Advance to next segment only when the user just typed the last digit (not when already full). */
+function shouldAdvanceSegment(prevLen, newLen, maxLen) {
+  return prevLen < maxLen && newLen >= maxLen;
+}
+
+/** Full segment — select all on focus so the next digit replaces instead of appending.
+   Captures `el` before scheduling because React nulls `currentTarget` after the handler returns;
+   uses rAF so the selection survives the trailing `mouseup` that follows a click-to-focus. */
+function selectSegmentInputOnFocus(e, maxLen) {
+  const el = e.currentTarget;
+  if (!el) return;
+  requestAnimationFrame(() => {
+    if (!el.isConnected || el.value.length < maxLen) return;
+    if (document.activeElement !== el) return;
+    try {
+      el.setSelectionRange(0, el.value.length);
+    } catch {
+      /* ignore */
+    }
+  });
+}
+
 /** Month 1–12; returns count of days (e.g. Feb leap). */
 function daysInCalendarMonth(year, month1) {
   return new Date(year, month1, 0).getDate();
 }
 
 function dateSegmentKeyDown(e, segment, ctx) {
+  handleSegmentedDateHorizontalKey(e, segment, ctx);
   handleSegmentedDateArrowKey(e, segment, ctx);
   handleSegmentedDateCrossKey(e, segment, ctx);
+}
+
+/** ArrowLeft / ArrowRight — move focus between DD / MM / YYYY segments. */
+function handleSegmentedDateHorizontalKey(e, segment, ctx) {
+  const { disabled, dRef, mRef, yRef } = ctx;
+  if (disabled) return;
+  if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+
+  const input = e.currentTarget;
+  const start = input.selectionStart;
+  const end = input.selectionEnd;
+  if (start == null || end == null || start !== end) return;
+
+  const valLen = input.value.length;
+
+  if (e.key === "ArrowLeft") {
+    if (start !== 0) return;
+    e.preventDefault();
+    if (segment === "m") {
+      focusInputCaret(dRef, dRef.current?.value.length ?? 0);
+    } else if (segment === "y") {
+      focusInputCaret(mRef, mRef.current?.value.length ?? 0);
+    }
+    return;
+  }
+
+  if (start !== valLen) return;
+  e.preventDefault();
+  if (segment === "d") {
+    focusInputCaret(mRef, 0);
+  } else if (segment === "m") {
+    focusInputCaret(yRef, 0);
+  }
 }
 
 /** ArrowUp / ArrowDown — step the active DD / MM / YYYY segment. */
@@ -511,8 +569,42 @@ function handleSegmentedTimeCrossKey(e, segment, ctx) {
 }
 
 function timeSegmentKeyDown(e, segment, ctx) {
+  handleSegmentedTimeHorizontalKey(e, segment, ctx);
   handleSegmentedTimeArrowKey(e, segment, ctx);
   handleSegmentedTimeCrossKey(e, segment, ctx);
+}
+
+/** ArrowLeft / ArrowRight — move focus between HH / MM / SS segments. */
+function handleSegmentedTimeHorizontalKey(e, segment, ctx) {
+  const { disabled, withSeconds, hRef, mRef, sRef } = ctx;
+  if (disabled) return;
+  if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+
+  const input = e.currentTarget;
+  const start = input.selectionStart;
+  const end = input.selectionEnd;
+  if (start == null || end == null || start !== end) return;
+
+  const valLen = input.value.length;
+
+  if (e.key === "ArrowLeft") {
+    if (start !== 0) return;
+    e.preventDefault();
+    if (segment === "m") {
+      focusInputCaret(hRef, hRef.current?.value.length ?? 0);
+    } else if (segment === "s" && withSeconds) {
+      focusInputCaret(mRef, mRef.current?.value.length ?? 0);
+    }
+    return;
+  }
+
+  if (start !== valLen) return;
+  e.preventDefault();
+  if (segment === "h") {
+    focusInputCaret(mRef, 0);
+  } else if (segment === "m" && withSeconds) {
+    focusInputCaret(sRef, 0);
+  }
 }
 
 /** ArrowUp / ArrowDown — step HH / MM / SS. */
@@ -588,6 +680,15 @@ function normalizeToHms(raw) {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
+/** HH:MM inputs ignore seconds — 23:59:00 and 23:59:59 are the same displayed value. */
+function timeHmsEqual(a, b, withSeconds = false) {
+  const na = normalizeToHms(a);
+  const nb = normalizeToHms(b);
+  if (na === nb) return true;
+  if (!withSeconds) return na.slice(0, 5) === nb.slice(0, 5);
+  return false;
+}
+
 /** Optional trailing time HH:mm:ss (24h). */
 function parseDateTimeValue(value) {
   const s = String(value ?? "").trim();
@@ -635,6 +736,40 @@ function packDateDraftForFilter(mode, d) {
   return { fromValue: pack(d.fromDate, d.timeFrom), toValue: pack(d.toDate, d.timeTo) };
 }
 
+/** Apply — fill unset dates with today / full-day times before writing filter values. */
+function packDateDraftForApply(mode, d, fallbackDay = startOfDay(new Date())) {
+  if (mode === "Single") {
+    const day = d.fromDate || d.toDate || fallbackDay;
+    const times = resolveSingleTabTimes(
+      formatDateTimeForFilter(day, d.timeFrom),
+      formatDateTimeForFilter(day, d.timeTo)
+    );
+    return {
+      fromValue: formatDateTimeForFilter(day, times.timeFrom),
+      toValue: formatDateTimeForFilter(day, times.timeTo),
+    };
+  }
+  if (mode === "Range") {
+    const resolved = resolveRangeInlineFields(
+      d.fromDate,
+      d.toDate,
+      d.timeFrom,
+      d.timeTo,
+      fallbackDay
+    );
+    return {
+      fromValue: formatDateTimeForFilter(resolved.fromDate, resolved.timeFrom),
+      toValue: formatDateTimeForFilter(resolved.toDate, resolved.timeTo),
+    };
+  }
+  if (mode === "After") {
+    const day = d.fromDate || fallbackDay;
+    return { fromValue: formatDateTimeForFilter(day, d.timeFrom), toValue: "" };
+  }
+  const day = d.toDate || fallbackDay;
+  return { fromValue: "", toValue: formatDateTimeForFilter(day, d.timeTo) };
+}
+
 function cloneDate(d) {
   return d ? new Date(d.getTime()) : null;
 }
@@ -656,10 +791,9 @@ function timeHmsFromDate(dt) {
   );
 }
 
-/** Enforce Single / Range / Before / After rules — no future day where rules say so; no future instant at “now”. */
+/** Enforce Single / Range / Before / After date/time ordering (future dates allowed). */
 function constrainDraftSlice(mode, slice) {
-  const now = new Date();
-  const sodToday = startOfDay(now);
+  const sodToday = startOfDay(new Date());
   let {
     fromDate,
     toDate,
@@ -671,20 +805,21 @@ function constrainDraftSlice(mode, slice) {
   let tf = normalizeToHms(timeFrom);
   let tt = normalizeToHms(timeTo);
 
-  const allowFuture = selectedPreset === "tomorrow";
-
-  const capDay = (d) => {
-    if (!d) return null;
-    if (!allowFuture) {
-      const sd = startOfDay(d);
-      if (sd > sodToday) return cloneDate(sodToday);
-    }
-    return cloneDate(d);
-  };
+  const capDay = (d) => (d ? cloneDate(d) : null);
 
   if (mode === "Single") {
     let day = fromDate || toDate ? capDay(fromDate || toDate) : null;
-    if (!day) day = cloneDate(sodToday);
+    if (!day) {
+      const vm = vmIn ?? new Date(sodToday.getFullYear(), sodToday.getMonth(), 1);
+      return {
+        fromDate: null,
+        toDate: null,
+        timeFrom: normalizeToHms("00:00:00"),
+        timeTo: normalizeToHms("23:59:59"),
+        visibleMonth: vm,
+        selectedPreset: selectedPreset ?? null,
+      };
+    }
     tf = normalizeToHms(tf);
     tt = normalizeToHms(tt);
     let A = combineDateAndTime(day, tf);
@@ -699,27 +834,6 @@ function constrainDraftSlice(mode, slice) {
       const x = tf;
       tf = tt;
       tt = x;
-      A = combineDateAndTime(day, tf);
-      B = combineDateAndTime(day, tt);
-    }
-    if (!allowFuture) {
-      const sodD = startOfDay(day);
-      if (sodD.getTime() === sodToday.getTime()) {
-        if (B > now) {
-          B = now;
-          tt = timeHmsFromDate(B);
-          A = combineDateAndTime(day, tf);
-        }
-        if (A > now) {
-          A = now;
-          tf = timeHmsFromDate(A);
-          B = combineDateAndTime(day, tt);
-          if (A > B) {
-            tt = tf;
-            B = new Date(A);
-          }
-        }
-      }
     }
     const baseVm = vmIn ?? new Date(day.getFullYear(), day.getMonth(), 1);
     return {
@@ -738,7 +852,14 @@ function constrainDraftSlice(mode, slice) {
 
     if (!fd && !td) {
       const vm = vmIn ?? new Date(sodToday.getFullYear(), sodToday.getMonth(), 1);
-      return { fromDate: null, toDate: null, timeFrom: tf, timeTo: tt, visibleMonth: vm, selectedPreset: selectedPreset ?? null };
+      return {
+        fromDate: null,
+        toDate: null,
+        timeFrom: normalizeToHms("00:00:00"),
+        timeTo: normalizeToHms("23:59:59"),
+        visibleMonth: vm,
+        selectedPreset: selectedPreset ?? null,
+      };
     }
 
     if (fd && !td) {
@@ -756,8 +877,7 @@ function constrainDraftSlice(mode, slice) {
       tf = tt;
       tt = xt;
     }
-    tf = normalizeToHms(tf);
-    tt = normalizeToHms(tt);
+    ({ timeFrom: tf, timeTo: tt } = defaultRangeDayTimes(fd, td, tf, tt));
     let lo = combineDateAndTime(fd, tf);
     let hi = combineDateAndTime(td, tt);
     if (!lo || !hi) {
@@ -770,11 +890,6 @@ function constrainDraftSlice(mode, slice) {
       const s = msLo;
       msLo = msHi;
       msHi = s;
-    }
-    if (!allowFuture) {
-      const msNow = now.getTime();
-      msHi = Math.min(msHi, msNow);
-      msLo = Math.min(msLo, msHi);
     }
 
     const dLo = new Date(msLo);
@@ -795,13 +910,19 @@ function constrainDraftSlice(mode, slice) {
   }
 
   if (mode === "Before") {
-    let d = capDay(toDate) || cloneDate(sodToday);
-    let B = combineDateAndTime(d, tt);
-    if (!allowFuture && B > now) {
-      B = now;
-      d = cloneDate(startOfDay(B));
-      tt = timeHmsFromDate(B);
+    let d = capDay(toDate);
+    if (!d) {
+      const vm = vmIn ?? new Date(sodToday.getFullYear(), sodToday.getMonth(), 1);
+      return {
+        fromDate: null,
+        toDate: null,
+        timeFrom: "00:00:00",
+        timeTo: normalizeToHms("23:59:59"),
+        visibleMonth: vm,
+        selectedPreset: selectedPreset ?? null,
+      };
     }
+    tt = normalizeToHms(tt);
     const vm = vmIn ?? new Date(d.getFullYear(), d.getMonth(), 1);
     return {
       fromDate: null,
@@ -814,13 +935,19 @@ function constrainDraftSlice(mode, slice) {
   }
 
   if (mode === "After") {
-    let d = capDay(fromDate) || cloneDate(sodToday);
-    let A = combineDateAndTime(d, tf);
-    if (!allowFuture && A > now) {
-      A = now;
-      d = cloneDate(startOfDay(A));
-      tf = timeHmsFromDate(A);
+    let d = capDay(fromDate);
+    if (!d) {
+      const vm = vmIn ?? new Date(sodToday.getFullYear(), sodToday.getMonth(), 1);
+      return {
+        fromDate: null,
+        toDate: null,
+        timeFrom: normalizeToHms("00:00:00"),
+        timeTo: "00:00:00",
+        visibleMonth: vm,
+        selectedPreset: selectedPreset ?? null,
+      };
     }
+    tf = normalizeToHms(tf);
     const vm = vmIn ?? new Date(d.getFullYear(), d.getMonth(), 1);
     return {
       fromDate: cloneDate(d),
@@ -862,6 +989,52 @@ function singleDraftFromRangeSlice(rangeDraft) {
     visibleMonth: vm,
     selectedPreset: null,
   });
+}
+
+function resolveSingleTabTimes(fromValue, toValue) {
+  const fp = parseDateTimeValue(fromValue);
+  const tp = parseDateTimeValue(toValue);
+  return {
+    timeFrom: normalizeToHms(fp.timeHms ?? "00:00:00"),
+    timeTo: tp.timeHms != null ? normalizeToHms(tp.timeHms) : "23:59:59",
+  };
+}
+
+function parseRangeDraftFromValues(fromValue, toValue) {
+  const fp = parseDateTimeValue(fromValue);
+  const tp = parseDateTimeValue(toValue);
+  return {
+    fromDate: fp.date ? cloneDate(fp.date) : null,
+    toDate: tp.date ? cloneDate(tp.date) : null,
+    timeFrom: normalizeToHms(fp.timeHms ?? "00:00:00"),
+    timeTo: tp.timeHms != null ? normalizeToHms(tp.timeHms) : "23:59:59",
+  };
+}
+
+function defaultRangeDayTimes(fromDate, toDate, timeFrom, timeTo) {
+  let tf = normalizeToHms(timeFrom);
+  let tt = normalizeToHms(timeTo);
+  if (!fromDate || !toDate) return { timeFrom: tf, timeTo: tt };
+  const sameDay = startOfDay(fromDate).getTime() === startOfDay(toDate).getTime();
+  if (!sameDay) {
+    return { timeFrom: normalizeToHms("00:00:00"), timeTo: normalizeToHms("23:59:59") };
+  }
+  if (tt === "00:00:00") tt = normalizeToHms("23:59:59");
+  return { timeFrom: tf, timeTo: tt };
+}
+
+/** Range inline fields — empty selection shows today 00:00 → today 23:59; multi-day spans use full-day times. */
+function resolveRangeInlineFields(fromDate, toDate, timeFrom, timeTo, fallbackDay) {
+  const today = fallbackDay ?? startOfDay(new Date());
+  const displayFrom = fromDate ?? today;
+  const displayTo = toDate ?? fromDate ?? today;
+  const { timeFrom: tf, timeTo: tt } = defaultRangeDayTimes(displayFrom, displayTo, timeFrom, timeTo);
+  return {
+    fromDate: cloneDate(displayFrom),
+    toDate: cloneDate(displayTo),
+    timeFrom: tf,
+    timeTo: tt,
+  };
 }
 
 function createEmptyTabDraft(fromDate, toDate, timeFrom, timeTo) {
@@ -954,11 +1127,15 @@ function SegmentedDateInput({
     fallbackDate: valueDate ?? placeholderDate ?? undefined,
   };
 
-  const onDigits = (raw, maxLen, setFn, nextRef, nextDv, nextMv, nextYv) => {
-    const v = raw.replace(/\D/g, "").slice(0, maxLen);
+  const onDigits = (raw, maxLen, setFn, nextRef, prevVal, nextDv, nextMv, nextYv) => {
+    const prevLen = prevVal.length;
+    /* slice(-maxLen): if user overtypes a full segment without selecting, drop the
+       oldest digits instead of the freshly typed ones. */
+    const digits = raw.replace(/\D/g, "");
+    const v = digits.length > maxLen ? digits.slice(-maxLen) : digits;
     setFn(v);
     commitCompleteDate(nextDv(v), nextMv(v), nextYv(v));
-    if (v.length >= maxLen && nextRef?.current) {
+    if (shouldAdvanceSegment(prevLen, v.length, maxLen) && nextRef?.current) {
       nextRef.current.focus();
     }
   };
@@ -1009,7 +1186,8 @@ function SegmentedDateInput({
         aria-label={`${ariaLabel} — day`}
         value={dv}
         disabled={disabled}
-        onChange={(e) => onDigits(e.target.value, 2, setDv, mRef, (v) => v, () => mv, () => yv)}
+        onChange={(e) => onDigits(e.target.value, 2, setDv, mRef, dv, (v) => v, () => mv, () => yv)}
+        onFocus={(e) => selectSegmentInputOnFocus(e, 2)}
         onKeyDown={(e) => dateSegmentKeyDown(e, "d", dateKeyCtx)}
       />
       <span className="df-seg-date__sep" aria-hidden>
@@ -1025,7 +1203,8 @@ function SegmentedDateInput({
         aria-label={`${ariaLabel} — month`}
         value={mv}
         disabled={disabled}
-        onChange={(e) => onDigits(e.target.value, 2, setMv, yRef, () => dv, (v) => v, () => yv)}
+        onChange={(e) => onDigits(e.target.value, 2, setMv, yRef, mv, () => dv, (v) => v, () => yv)}
+        onFocus={(e) => selectSegmentInputOnFocus(e, 2)}
         onKeyDown={(e) => dateSegmentKeyDown(e, "m", dateKeyCtx)}
       />
       <span className="df-seg-date__sep" aria-hidden>
@@ -1041,7 +1220,8 @@ function SegmentedDateInput({
         aria-label={`${ariaLabel} — year`}
         value={yv}
         disabled={disabled}
-        onChange={(e) => onDigits(e.target.value, 4, setYv, null, () => dv, () => mv, (v) => v)}
+        onChange={(e) => onDigits(e.target.value, 4, setYv, null, yv, () => dv, () => mv, (v) => v)}
+        onFocus={(e) => selectSegmentInputOnFocus(e, 4)}
         onKeyDown={(e) => dateSegmentKeyDown(e, "y", dateKeyCtx)}
       />
     </>
@@ -1141,11 +1321,17 @@ function FilterDateSegment({ valueDate, placeholderDate, onCommitDate, ariaLabel
     fallbackDate: valueDate ?? placeholderDate ?? undefined,
   };
 
-  const onDigits = (raw, maxLen, setFn, nextRef, nextDv, nextMv, nextYv) => {
-    const v = raw.replace(/\D/g, "").slice(0, maxLen);
+  const onDigits = (raw, maxLen, setFn, nextRef, prevVal, nextDv, nextMv, nextYv) => {
+    const prevLen = prevVal.length;
+    /* slice(-maxLen): if user overtypes a full segment without selecting, drop the
+       oldest digits instead of the freshly typed ones. */
+    const digits = raw.replace(/\D/g, "");
+    const v = digits.length > maxLen ? digits.slice(-maxLen) : digits;
     setFn(v);
     commitCompleteDate(nextDv(v), nextMv(v), nextYv(v));
-    if (v.length >= maxLen && nextRef?.current) nextRef.current.focus();
+    if (shouldAdvanceSegment(prevLen, v.length, maxLen) && nextRef?.current) {
+      nextRef.current.focus();
+    }
   };
 
   const focusFirstEmpty = useCallback(() => {
@@ -1176,7 +1362,8 @@ function FilterDateSegment({ valueDate, placeholderDate, onCommitDate, ariaLabel
           className="fp-date-wrap__inp" placeholder={ph.day}
           aria-label={`${ariaLabel} — day`}
           value={dv}
-          onChange={(e) => onDigits(e.target.value, 2, setDv, mRef, (v) => v, () => mv, () => yv)}
+          onChange={(e) => onDigits(e.target.value, 2, setDv, mRef, dv, (v) => v, () => mv, () => yv)}
+          onFocus={(e) => selectSegmentInputOnFocus(e, 2)}
           onKeyDown={(e) => dateSegmentKeyDown(e, "d", dateKeyCtx)}
         />
       </div>
@@ -1187,7 +1374,8 @@ function FilterDateSegment({ valueDate, placeholderDate, onCommitDate, ariaLabel
           className="fp-date-wrap__inp" placeholder={ph.month}
           aria-label={`${ariaLabel} — month`}
           value={mv}
-          onChange={(e) => onDigits(e.target.value, 2, setMv, yRef, () => dv, (v) => v, () => yv)}
+          onChange={(e) => onDigits(e.target.value, 2, setMv, yRef, mv, () => dv, (v) => v, () => yv)}
+          onFocus={(e) => selectSegmentInputOnFocus(e, 2)}
           onKeyDown={(e) => dateSegmentKeyDown(e, "m", dateKeyCtx)}
         />
       </div>
@@ -1198,7 +1386,8 @@ function FilterDateSegment({ valueDate, placeholderDate, onCommitDate, ariaLabel
           className="fp-date-wrap__inp" placeholder={ph.year}
           aria-label={`${ariaLabel} — year`}
           value={yv}
-          onChange={(e) => onDigits(e.target.value, 4, setYv, null, () => dv, () => mv, (v) => v)}
+          onChange={(e) => onDigits(e.target.value, 4, setYv, null, yv, () => dv, () => mv, (v) => v)}
+          onFocus={(e) => selectSegmentInputOnFocus(e, 4)}
           onKeyDown={(e) => dateSegmentKeyDown(e, "y", dateKeyCtx)}
         />
       </div>
@@ -1223,7 +1412,6 @@ function SegmentedTimeInput({
   const mRef = useRef(null);
   const sRef = useRef(null);
   const canonicalHms = normalizeToHms(valueHms);
-  const [interactionTouched, setInteractionTouched] = useState(false);
   const [hv, setHv] = useState(() => canonicalHms.slice(0, 2));
   const [mv, setMv] = useState(() => canonicalHms.slice(3, 5));
   const [sv, setSv] = useState(() => canonicalHms.slice(6, 8));
@@ -1233,7 +1421,15 @@ function SegmentedTimeInput({
   const mvRef = useRef(mv);
   const svRef = useRef(sv);
 
-  const defaultMidnightPlaceholderTone = !interactionTouched && canonicalHms === "00:00:00";
+  /* `touched` — was this field edited by the user since the last external sync?
+     Drives the placeholder-tone class: as soon as user types, switch from greyed
+     "default model" look to the active label-medium / dense-900 style. */
+  const [touched, setTouched] = useState(false);
+  /* Remember the last value we pushed to the parent so we can recognise the
+     parent's echo on `valueHms` and avoid resetting `touched` on it. */
+  const lastCommittedRef = useRef(null);
+
+  const defaultPlaceholderTone = !touched;
 
   useEffect(() => {
     const n = normalizeToHms(valueHms);
@@ -1246,13 +1442,20 @@ function SegmentedTimeInput({
     setHv(nh);
     setMv(nm);
     setSv(ns);
-  }, [valueHms]);
+    const echo =
+      lastCommittedRef.current != null &&
+      timeHmsEqual(lastCommittedRef.current, valueHms, withSeconds);
+    if (echo) {
+      lastCommittedRef.current = null;
+    } else {
+      setTouched(false);
+    }
+  }, [valueHms, withSeconds]);
 
   const commit = useCallback(() => {
     const out = normalizeToHms(
       `${hvRef.current}:${mvRef.current}:${withSeconds ? svRef.current : "00"}`
     );
-    onCommit(out);
     const nh = out.slice(0, 2);
     const nmi = out.slice(3, 5);
     const ns = out.slice(6, 8);
@@ -1262,12 +1465,18 @@ function SegmentedTimeInput({
     setHv(nh);
     setMv(nmi);
     setSv(ns);
-  }, [onCommit, withSeconds]);
+    if (!timeHmsEqual(out, valueHms, withSeconds)) {
+      lastCommittedRef.current = out;
+      onCommit(out);
+    }
+  }, [onCommit, withSeconds, valueHms]);
 
   const commitFromBlur = useCallback(
     (e) => {
       const rt = e.relatedTarget;
       if (rt instanceof Node && blurExemptContainerRef?.current?.contains(rt)) return;
+      const group = e.currentTarget.closest(".df-seg-time");
+      if (rt instanceof Node && group?.contains(rt)) return;
       commit();
     },
     [commit, blurExemptContainerRef]
@@ -1275,8 +1484,8 @@ function SegmentedTimeInput({
 
   const applyTime = useCallback(
     (h, m, s) => {
-      setInteractionTouched(true);
       const out = normalizeToHms(`${h}:${m}:${withSeconds ? s : "00"}`);
+      lastCommittedRef.current = out;
       onCommit(out);
       const nh = out.slice(0, 2);
       const nmi = out.slice(3, 5);
@@ -1287,6 +1496,7 @@ function SegmentedTimeInput({
       setHv(nh);
       setMv(nmi);
       setSv(ns);
+      setTouched(true);
     },
     [onCommit, withSeconds]
   );
@@ -1294,12 +1504,17 @@ function SegmentedTimeInput({
   const timeKeyCtx = { disabled, withSeconds, hv, mv, sv, applyTime, hRef, mRef, sRef };
 
   const onDigits = (raw, maxLen, setFn, nextRef, valRef) => {
-    setInteractionTouched(true);
-    const digitsOnly = raw.replace(/\D/g, "");
-    const v = digitsOnly.length > maxLen ? digitsOnly.slice(-maxLen) : digitsOnly;
+    const prevLen = valRef.current.length;
+    /* slice(-maxLen): if user overtypes a full segment without selecting, drop the
+       oldest digits instead of the freshly typed ones (e.g. "00" + "1" -> "001" -> "01"). */
+    const digits = raw.replace(/\D/g, "");
+    const v = digits.length > maxLen ? digits.slice(-maxLen) : digits;
     valRef.current = v;
     setFn(v);
-    if (v.length >= maxLen && nextRef?.current) nextRef.current.focus();
+    setTouched(true);
+    if (shouldAdvanceSegment(prevLen, v.length, maxLen) && nextRef?.current) {
+      nextRef.current.focus();
+    }
   };
 
   const focusFirstEmpty = () => {
@@ -1320,7 +1535,7 @@ function SegmentedTimeInput({
   const segClass = [
     "df-seg-time",
     embedded && fill ? "df-seg-time--embed-fill" : "",
-    defaultMidnightPlaceholderTone ? "df-seg-time--default-zero" : "",
+    defaultPlaceholderTone ? "df-seg-time--default-placeholder" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -1332,12 +1547,13 @@ function SegmentedTimeInput({
         type="text"
         inputMode="numeric"
         autoComplete="off"
-        className="df-seg-time__inp"
+        className="df-seg-time__inp df-seg-time__inp--hh"
         placeholder="00"
         aria-label={`${ariaLabel} — hours`}
         value={hv}
         disabled={disabled}
         onChange={(e) => onDigits(e.target.value, 2, setHv, mRef, hvRef)}
+        onFocus={(e) => selectSegmentInputOnFocus(e, 2)}
         onKeyDown={(e) => timeSegmentKeyDown(e, "h", timeKeyCtx)}
         onBlur={commitFromBlur}
       />
@@ -1349,12 +1565,13 @@ function SegmentedTimeInput({
         type="text"
         inputMode="numeric"
         autoComplete="off"
-        className="df-seg-time__inp"
+        className="df-seg-time__inp df-seg-time__inp--mm"
         placeholder="00"
         aria-label={`${ariaLabel} — minutes`}
         value={mv}
         disabled={disabled}
         onChange={(e) => onDigits(e.target.value, 2, setMv, withSeconds ? sRef : null, mvRef)}
+        onFocus={(e) => selectSegmentInputOnFocus(e, 2)}
         onKeyDown={(e) => timeSegmentKeyDown(e, "m", timeKeyCtx)}
         onBlur={commitFromBlur}
       />
@@ -1374,6 +1591,7 @@ function SegmentedTimeInput({
             value={sv}
             disabled={disabled}
             onChange={(e) => onDigits(e.target.value, 2, setSv, null, svRef)}
+            onFocus={(e) => selectSegmentInputOnFocus(e, 2)}
             onKeyDown={(e) => timeSegmentKeyDown(e, "s", timeKeyCtx)}
             onBlur={commitFromBlur}
           />
@@ -1447,10 +1665,6 @@ function applyDatePreset(id) {
       const d = addDays(today, -1);
       return { from: d, to: d };
     }
-    case "tomorrow": {
-      const d = addDays(today, 1);
-      return { from: d, to: d };
-    }
     case "last-7-days":
       return { from: addDays(today, -6), to: today };
     case "last-30-days":
@@ -1462,6 +1676,79 @@ function applyDatePreset(id) {
   }
 }
 
+function PopoverFieldToSep() {
+  return <span className="df-field-sep">to</span>;
+}
+
+function PopoverInlineDateTimeField({
+  valueDate,
+  placeholderDate,
+  onCommitDate,
+  timeHms,
+  onCommitTime,
+  ariaLabel,
+  blurExemptContainerRef,
+}) {
+  return (
+    <div className="df-inline-field">
+      <div className="df-inline-field__date">
+        <SegmentedDateInput
+          embedded
+          blurExemptContainerRef={blurExemptContainerRef}
+          valueDate={valueDate}
+          placeholderDate={placeholderDate}
+          onCommitDate={onCommitDate}
+          ariaLabel={`${ariaLabel} — date`}
+        />
+      </div>
+      <div className="df-inline-field__time">
+        <SegmentedTimeInput
+          embedded
+          blurExemptContainerRef={blurExemptContainerRef}
+          withSeconds={false}
+          valueHms={timeHms}
+          onCommit={onCommitTime}
+          ariaLabel={`${ariaLabel} — time`}
+        />
+      </div>
+    </div>
+  );
+}
+
+function PopoverInlineDateField({ valueDate, placeholderDate, onCommitDate, ariaLabel, blurExemptContainerRef }) {
+  return (
+    <div className="df-inline-field df-inline-field--date-only">
+      <div className="df-inline-field__date">
+        <SegmentedDateInput
+          embedded
+          blurExemptContainerRef={blurExemptContainerRef}
+          valueDate={valueDate}
+          placeholderDate={placeholderDate}
+          onCommitDate={onCommitDate}
+          ariaLabel={`${ariaLabel} — date`}
+        />
+      </div>
+    </div>
+  );
+}
+
+function PopoverInlineTimeField({ timeHms, onCommit, ariaLabel, blurExemptContainerRef }) {
+  return (
+    <div className="df-inline-field df-inline-field--time-only">
+      <div className="df-inline-field__time">
+        <SegmentedTimeInput
+          embedded
+          blurExemptContainerRef={blurExemptContainerRef}
+          withSeconds={false}
+          valueHms={timeHms}
+          onCommit={onCommit}
+          ariaLabel={ariaLabel}
+        />
+      </div>
+    </div>
+  );
+}
+
 function DateFilterPopover({
   anchorEl,
   field,
@@ -1470,7 +1757,6 @@ function DateFilterPopover({
   onModeChange,
   onLiveDraft,
   onApply,
-  onReset,
   onClose,
 }) {
   const popoverRef = useRef(null);
@@ -1479,14 +1765,30 @@ function DateFilterPopover({
   const toParsed = parseDateTimeValue(values[field.toId]);
   const initialFrom = fromParsed.date;
   const initialTo = toParsed.date;
-  const initialTimeFrom = normalizeToHms(fromParsed.timeHms);
-  const initialTimeTo = normalizeToHms(toParsed.timeHms);
+  const singleTimes = resolveSingleTabTimes(values[field.fromId], values[field.toId]);
+  const rangeParsed = parseRangeDraftFromValues(values[field.fromId], values[field.toId]);
+  const initialTimeFrom = singleTimes.timeFrom;
+  const initialTimeTo = singleTimes.timeTo;
+
+  const placeholderToday = startOfDay(new Date());
 
   const [draftsByMode, setDraftsByMode] = useState(() => ({
-    Single: createEmptyTabDraft(initialFrom, initialTo, initialTimeFrom, initialTimeTo),
-    Range: createEmptyTabDraft(initialFrom, initialTo, initialTimeFrom, initialTimeTo),
-    After: createEmptyTabDraft(initialFrom, null, initialTimeFrom, "00:00"),
-    Before: createEmptyTabDraft(null, initialTo, "00:00", initialTimeTo),
+    Single: constrainDraftSlice(
+      "Single",
+      createEmptyTabDraft(initialFrom, initialTo, initialTimeFrom, initialTimeTo)
+    ),
+    Range: constrainDraftSlice(
+      "Range",
+      createEmptyTabDraft(rangeParsed.fromDate, rangeParsed.toDate, rangeParsed.timeFrom, rangeParsed.timeTo)
+    ),
+    After: constrainDraftSlice(
+      "After",
+      createEmptyTabDraft(initialFrom, null, initialTimeFrom, "00:00")
+    ),
+    Before: constrainDraftSlice(
+      "Before",
+      createEmptyTabDraft(null, initialTo, "00:00", initialTimeTo)
+    ),
   }));
   const [positioned, setPositioned] = useState(false);
 
@@ -1533,13 +1835,21 @@ function DateFilterPopover({
       const tp = parseDateTimeValue(toV);
       const iFrom = fp.date;
       const iTo = tp.date;
+      const singleTimes = resolveSingleTabTimes(fromV, toV);
+      const rangeParsed = parseRangeDraftFromValues(fromV, toV);
       const iTf = normalizeToHms(fp.timeHms);
       const iTt = normalizeToHms(tp.timeHms);
       return {
-        Single: createEmptyTabDraft(iFrom, iTo, iTf, iTt),
-        Range: createEmptyTabDraft(iFrom, iTo, iTf, iTt),
-        After: createEmptyTabDraft(iFrom, null, iTf, "00:00"),
-        Before: createEmptyTabDraft(null, iTo, "00:00", iTt),
+        Single: constrainDraftSlice(
+          "Single",
+          createEmptyTabDraft(iFrom, iTo, singleTimes.timeFrom, singleTimes.timeTo)
+        ),
+        Range: constrainDraftSlice(
+          "Range",
+          createEmptyTabDraft(rangeParsed.fromDate, rangeParsed.toDate, rangeParsed.timeFrom, rangeParsed.timeTo)
+        ),
+        After: constrainDraftSlice("After", createEmptyTabDraft(iFrom, null, iTf, "00:00")),
+        Before: constrainDraftSlice("Before", createEmptyTabDraft(null, iTo, "00:00", iTt)),
       };
     });
   }, [field.fromId, field.toId, values[field.fromId], values[field.toId], mode]);
@@ -1614,6 +1924,31 @@ function DateFilterPopover({
 
   const handlePreset = useCallback(
     (presetId) => {
+      if (presetId === "30-minutes" || presetId === "1-hour") {
+        onModeChange?.("Single");
+        setDraftsByMode((prev) => {
+          const now = new Date();
+          const ms = presetId === "30-minutes" ? 30 * 60 * 1000 : 60 * 60 * 1000;
+          const fromDt = new Date(now.getTime() - ms);
+          const updatedSlice = constrainDraftSlice("Single", {
+            ...prev.Single,
+            fromDate: startOfDay(fromDt),
+            toDate: startOfDay(now),
+            visibleMonth: new Date(now.getFullYear(), now.getMonth(), 1),
+            selectedPreset: presetId,
+            timeFrom: timeHmsFromDate(fromDt),
+            timeTo: timeHmsFromDate(now),
+          });
+          const out = { ...prev, Single: updatedSlice };
+          queueMicrotask(() => {
+            const { fromValue, toValue } = packDateDraftForFilter("Single", updatedSlice);
+            onLiveDraft?.(fromValue, toValue);
+          });
+          return out;
+        });
+        return;
+      }
+
       const forceRange = PRESETS_THAT_FORCE_RANGE.has(presetId);
       const forceSingle = PRESETS_THAT_FORCE_SINGLE.has(presetId);
       if (forceRange) {
@@ -1765,9 +2100,6 @@ function DateFilterPopover({
           {days.map((day) => {
             const outside = day.getMonth() !== monthDate.getMonth();
             const sodDay = startOfDay(day);
-            const sodNow = startOfDay(new Date());
-            const disallowFutureDates = selectedPreset !== "tomorrow" && ["Single", "Range", "Before", "After"].includes(mode);
-            const isBeyondNow = disallowFutureDates && !outside && sodDay > sodNow;
 
             const selected = sameDay(day, fromDate) || sameDay(day, toDate);
 
@@ -1788,16 +2120,13 @@ function DateFilterPopover({
               mode === "After" &&
               Boolean(fromDate) &&
               !outside &&
-              sodDay.getTime() > startOfDay(fromDate).getTime() &&
-              sodDay.getTime() <= sodNow.getTime();
+              sodDay.getTime() > startOfDay(fromDate).getTime();
 
             const isToday = sameDay(day, todayCell);
             return (
               <button
                 key={day.toISOString()}
                 type="button"
-                disabled={isBeyondNow}
-                aria-disabled={isBeyondNow ? true : undefined}
                 aria-current={isToday ? "date" : undefined}
                 className={[
                   "df-day",
@@ -1807,7 +2136,6 @@ function DateFilterPopover({
                   selected ? "df-day--selected" : "",
                   inRange ? "df-day--range" : "",
                   isToday ? "df-day--today" : "",
-                  isBeyondNow ? "df-day--beyond-now" : "",
                 ]
                   .filter(Boolean)
                   .join(" ")}
@@ -1823,9 +2151,6 @@ function DateFilterPopover({
     );
   };
 
-  const placeholderToday = startOfDay(new Date());
-  const placeholderTomorrow = addDays(placeholderToday, 1);
-
   return (
     <div
       ref={popoverRef}
@@ -1835,7 +2160,6 @@ function DateFilterPopover({
     >
       <div className="df-popover__main">
         <aside className="df-presets">
-          <div className="df-preset-heading">Presets</div>
           <div className="df-preset-list">
             {DATE_PRESETS.map((preset) => (
               <button
@@ -1853,18 +2177,34 @@ function DateFilterPopover({
         <div className="df-calendar">
           <div className="df-calendar__body">
             <div className="df-mode">
-              <div className="df-mode__label">Type</div>
               <div className="df-mode__group" role="tablist" aria-label="Type">
-                {DATE_MODES.map((item) => (
+                <div className="df-mode__bg" aria-hidden />
+                {DATE_MODE_PRIMARY.map((item) => (
                   <button
                     key={item}
                     type="button"
-                    className={`df-mode__btn${mode === item ? " is-selected" : ""}`}
+                    role="tab"
+                    aria-selected={mode === item}
+                    className={`df-mode__btn df-mode__btn--primary${mode === item ? " is-selected" : ""}`}
                     onClick={() => handleModeChange(item)}
                   >
                     {item}
                   </button>
                 ))}
+                <div className="df-mode__slot" role="presentation">
+                  {DATE_MODE_SECONDARY.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      role="tab"
+                      aria-selected={mode === item}
+                      className={`df-mode__btn df-mode__btn--secondary${mode === item ? " is-selected" : ""}`}
+                      onClick={() => handleModeChange(item)}
+                    >
+                      {item}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -1874,193 +2214,102 @@ function DateFilterPopover({
                 {renderMonth(addMonths(visibleMonth, 1), { showPrevNav: false, showNextNav: true })}
               </div>
 
-            {mode === "Single" ? (
-              <div className="df-date-fields df-date-fields--single">
-                <UnitTextfield size="sm" className="df-popover-textfield df-popover-textfield--date-fixed" label="Date">
-                  <CalendarGlyph className="icon" />
-                  <SegmentedDateInput
-                    embedded
+              {mode === "Single" ? (
+                <div className="df-date-fields df-date-fields--single">
+                  <PopoverInlineDateField
                     blurExemptContainerRef={calendarMonthsRef}
                     valueDate={fromDate || toDate}
                     placeholderDate={placeholderToday}
                     onCommitDate={(d) =>
                       d ? updateDraft({ fromDate: d, toDate: d }) : updateDraft({ fromDate: null, toDate: null })
                     }
-                    ariaLabel={`${field.label} — date`}
+                    ariaLabel={field.label}
                   />
-                </UnitTextfield>
-                <div className="df-single-time-group">
-                  <UnitTextfield size="sm" className="df-popover-textfield" label="Time">
-                    <ClockGlyph className="icon" />
-                    <SegmentedTimeInput
-                      embedded
+                  <div className="df-single-time-row">
+                    <PopoverInlineTimeField
                       blurExemptContainerRef={calendarMonthsRef}
-                      fill
-                      withSeconds
-                      valueHms={timeFrom}
+                      timeHms={timeFrom}
                       onCommit={(t) => updateDraft({ timeFrom: t })}
                       ariaLabel={`${field.label} — from time`}
                     />
-                  </UnitTextfield>
-                  <UnitTextfield
-                    size="sm"
-                    className="df-popover-textfield"
-                    label={<PopoverTextfieldEmptyLabel />}
-                    rootProps={{ "aria-label": `${field.label} — to time` }}
-                  >
-                    <ClockGlyph className="icon" />
-                    <SegmentedTimeInput
-                      embedded
+                    <PopoverFieldToSep />
+                    <PopoverInlineTimeField
                       blurExemptContainerRef={calendarMonthsRef}
-                      fill
-                      withSeconds
-                      valueHms={timeTo}
+                      timeHms={timeTo}
                       onCommit={(t) => updateDraft({ timeTo: t })}
                       ariaLabel={`${field.label} — to time`}
                     />
-                  </UnitTextfield>
-                </div>
-              </div>
-            ) : mode === "Range" ? (
-              <div className="df-date-fields df-date-fields--range">
-                <div className="df-date-range-column">
-                  <div className="df-date-range-row">
-                    <UnitTextfield size="sm" className="df-popover-textfield df-popover-textfield--range-date" label="From">
-                      <CalendarGlyph className="icon" />
-                      <SegmentedDateInput
-                        embedded
-                        blurExemptContainerRef={calendarMonthsRef}
-                        valueDate={fromDate}
-                        placeholderDate={placeholderToday}
-                        onCommitDate={(d) => updateDraft({ fromDate: d })}
-                        ariaLabel={`${field.label} — from date`}
-                      />
-                    </UnitTextfield>
-                    <UnitTextfield
-                      size="sm"
-                      className="df-popover-textfield df-popover-textfield--range-time"
-                      label={<PopoverTextfieldEmptyLabel />}
-                      rootProps={{ "aria-label": `${field.label} — from time` }}
-                    >
-                      <ClockGlyph className="icon" />
-                      <SegmentedTimeInput
-                        embedded
-                        blurExemptContainerRef={calendarMonthsRef}
-                        fill
-                        withSeconds={false}
-                        valueHms={timeFrom}
-                        onCommit={(t) => updateDraft({ timeFrom: t })}
-                        ariaLabel={`${field.label} — from time`}
-                      />
-                    </UnitTextfield>
                   </div>
                 </div>
-                <div className="df-date-range-column">
-                  <div className="df-date-range-row">
-                    <UnitTextfield size="sm" className="df-popover-textfield df-popover-textfield--range-date" label="To">
-                      <CalendarGlyph className="icon" />
-                      <SegmentedDateInput
-                        embedded
-                        blurExemptContainerRef={calendarMonthsRef}
-                        valueDate={toDate}
-                        placeholderDate={placeholderTomorrow}
-                        onCommitDate={(d) => updateDraft({ toDate: d })}
-                        ariaLabel={`${field.label} — to date`}
-                      />
-                    </UnitTextfield>
-                    <UnitTextfield
-                      size="sm"
-                      className="df-popover-textfield df-popover-textfield--range-time"
-                      label={<PopoverTextfieldEmptyLabel />}
-                      rootProps={{ "aria-label": `${field.label} — to time` }}
-                    >
-                      <ClockGlyph className="icon" />
-                      <SegmentedTimeInput
-                        embedded
-                        blurExemptContainerRef={calendarMonthsRef}
-                        fill
-                        withSeconds={false}
-                        valueHms={timeTo}
-                        onCommit={(t) => updateDraft({ timeTo: t })}
-                        ariaLabel={`${field.label} — to time`}
-                      />
-                    </UnitTextfield>
-                  </div>
-                </div>
-              </div>
-            ) : mode === "After" ? (
-              <div className="df-date-fields df-date-fields--single">
-                <UnitTextfield size="sm" className="df-popover-textfield df-popover-textfield--date-fixed" label="Date">
-                  <CalendarGlyph className="icon" />
-                  <SegmentedDateInput
-                    embedded
+              ) : mode === "Range" ? (
+                <div className="df-date-fields df-date-fields--range">
+                  <PopoverInlineDateTimeField
                     blurExemptContainerRef={calendarMonthsRef}
                     valueDate={fromDate}
                     placeholderDate={placeholderToday}
                     onCommitDate={(d) => updateDraft({ fromDate: d })}
-                    ariaLabel={`${field.label} — after date`}
+                    timeHms={timeFrom}
+                    onCommitTime={(t) => updateDraft({ timeFrom: t })}
+                    ariaLabel={`${field.label} — from`}
                   />
-                </UnitTextfield>
-                <UnitTextfield size="sm" className="df-popover-textfield df-popover-textfield--pair-datetime-time" label="Time">
-                  <ClockGlyph className="icon" />
-                  <SegmentedTimeInput
-                    embedded
-                    blurExemptContainerRef={calendarMonthsRef}
-                    fill
-                    withSeconds
-                    valueHms={timeFrom}
-                    onCommit={(t) => updateDraft({ timeFrom: t })}
-                    ariaLabel={`${field.label} — after time`}
-                  />
-                </UnitTextfield>
-              </div>
-            ) : (
-              <div className="df-date-fields df-date-fields--single">
-                <UnitTextfield size="sm" className="df-popover-textfield df-popover-textfield--date-fixed" label="Date">
-                  <CalendarGlyph className="icon" />
-                  <SegmentedDateInput
-                    embedded
+                  <PopoverFieldToSep />
+                  <PopoverInlineDateTimeField
                     blurExemptContainerRef={calendarMonthsRef}
                     valueDate={toDate}
                     placeholderDate={placeholderToday}
                     onCommitDate={(d) => updateDraft({ toDate: d })}
-                    ariaLabel={`${field.label} — before date`}
+                    timeHms={timeTo}
+                    onCommitTime={(t) => updateDraft({ timeTo: t })}
+                    ariaLabel={`${field.label} — to`}
                   />
-                </UnitTextfield>
-                <UnitTextfield size="sm" className="df-popover-textfield df-popover-textfield--pair-datetime-time" label="Time">
-                  <ClockGlyph className="icon" />
-                  <SegmentedTimeInput
-                    embedded
+                </div>
+              ) : mode === "After" ? (
+                <div className="df-date-fields df-date-fields--bound">
+                  <span className="df-field-mode-label">After</span>
+                  <PopoverInlineDateTimeField
                     blurExemptContainerRef={calendarMonthsRef}
-                    fill
-                    withSeconds
-                    valueHms={timeTo}
-                    onCommit={(t) => updateDraft({ timeTo: t })}
-                    ariaLabel={`${field.label} — before time`}
+                    valueDate={fromDate}
+                    placeholderDate={placeholderToday}
+                    onCommitDate={(d) => updateDraft({ fromDate: d })}
+                    timeHms={timeFrom}
+                    onCommitTime={(t) => updateDraft({ timeFrom: t })}
+                    ariaLabel={`${field.label} — after`}
                   />
-                </UnitTextfield>
-              </div>
-            )}
+                </div>
+              ) : (
+                <div className="df-date-fields df-date-fields--bound">
+                  <span className="df-field-mode-label">Before</span>
+                  <PopoverInlineDateTimeField
+                    blurExemptContainerRef={calendarMonthsRef}
+                    valueDate={toDate}
+                    placeholderDate={placeholderToday}
+                    onCommitDate={(d) => updateDraft({ toDate: d })}
+                    timeHms={timeTo}
+                    onCommitTime={(t) => updateDraft({ timeTo: t })}
+                    ariaLabel={`${field.label} — before`}
+                  />
+                </div>
+              )}
             </div>
           </div>
-
-          <div className="df-footer">
-            <button type="button" className="cf-footer__btn cf-footer__btn--secondary" onClick={onReset}>
-              Reset
-            </button>
-            <button
-              type="button"
-              className="cf-footer__btn cf-footer__btn--save"
-              onClick={() => {
-                const d = draftsByMode[mode];
-                const { fromValue, toValue } = packDateDraftForFilter(mode, d);
-                onApply(fromValue, toValue, mode);
-              }}
-            >
-              Apply
-            </button>
-          </div>
         </div>
+      </div>
+
+      <div className="df-footer">
+        <button type="button" className="df-footer__btn df-footer__btn--secondary" onClick={onClose}>
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="df-footer__btn df-footer__btn--primary"
+          onClick={() => {
+            const d = draftsByMode[mode];
+            const { fromValue, toValue } = packDateDraftForApply(mode, d, placeholderToday);
+            onApply(fromValue, toValue, mode);
+          }}
+        >
+          Apply
+        </button>
       </div>
     </div>
   );
@@ -2102,6 +2351,49 @@ const SWITCHER_ON_SVG_HTML =
   '<circle class="cf-switcher-v3__thumb" cx="7.33333" cy="12" r="6"/>' +
   "</g></svg></span>";
 
+/** Build floating row preview for filter reorder (pointer-driven — no HTML5 DnD ghost). */
+function buildFilterDragLayer(row) {
+  const rect = row.getBoundingClientRect();
+  const label = row.querySelector(".cf-filter-row__label")?.textContent?.trim() ?? "";
+  const desc = row.querySelector(".cf-filter-row__desc")?.textContent?.trim() ?? "";
+  const hasSwitcher = Boolean(row.querySelector(".cf-switcher-v3"));
+  const actionsHtml = hasSwitcher
+    ? `<div class="cf-filter-row-drag-layer__actions">${SWITCHER_ON_SVG_HTML}</div>`
+    : '<div class="cf-filter-row-drag-layer__actions" aria-hidden="true"></div>';
+
+  const layer = document.createElement("div");
+  layer.className = "cf-filter-row-drag-layer";
+  layer.setAttribute("role", "presentation");
+  layer.innerHTML = [
+    '<div class="cf-filter-row-drag-layer__inner">',
+    `<div class="cf-filter-row-drag-layer__grip" aria-hidden="true">${FILTER_DRAG_GRIP_SVG_HTML}</div>`,
+    '<div class="cf-filter-row-drag-layer__text">',
+    '<span class="cf-filter-row-drag-layer__label"></span>',
+    '<span class="cf-filter-row-drag-layer__desc"></span>',
+    "</div>",
+    actionsHtml,
+    "</div>",
+  ].join("");
+  layer.querySelector(".cf-filter-row-drag-layer__label").textContent = label;
+  layer.querySelector(".cf-filter-row-drag-layer__desc").textContent = desc;
+  Object.assign(layer.style, {
+    position: "fixed",
+    left: "0",
+    top: "0",
+    width: `${rect.width}px`,
+    zIndex: "10050",
+    pointerEvents: "none",
+    boxSizing: "border-box",
+  });
+  return { layer, width: rect.width };
+}
+
+function positionFilterDragLayer(layer, clientX, clientY, offset) {
+  layer.style.left = `${clientX - offset.x}px`;
+  layer.style.top = `${clientY - offset.y}px`;
+}
+
+/* ─── Switcher v3 component ─── */
 function SwitcherV3({ checked, onChange, disabled = false }) {
   const [animating, setAnimating] = useState(null); // "on" | "off" | null
   const [heldVisual, setHeldVisual] = useState(null); // target checked while waiting to commit
@@ -2423,105 +2715,82 @@ function CustomizeFiltersPopover({
     return next;
   }, []);
 
-  const handleDragStart = useCallback(
+  const handleGripPointerDown = useCallback(
     (e, filterId) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      const grip = e.currentTarget;
+      const row = grip.closest(".cf-filter-row");
+      if (!row) return;
+
+      const rect = row.getBoundingClientRect();
+      const offset = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      dragOffsetRef.current = offset;
+      dragItemId.current = filterId;
+
+      const startIds = [...activeFilterIds];
+      let latestPreview = startIds;
+      let ended = false;
+
       document.documentElement.classList.add("cf-filter-dnd-active");
       document.documentElement.style.setProperty("cursor", "grabbing", "important");
       document.body.style.setProperty("cursor", "grabbing", "important");
-      dragItemId.current = filterId;
-      e.dataTransfer.effectAllowed = "move";
 
-      const row = e.currentTarget;
-      const rect = row.getBoundingClientRect();
-      const label = row.querySelector(".cf-filter-row__label")?.textContent?.trim() ?? "";
-      const desc = row.querySelector(".cf-filter-row__desc")?.textContent?.trim() ?? "";
-      const hasSwitcher = Boolean(row.querySelector(".cf-switcher-v3"));
-      const actionsHtml = hasSwitcher
-        ? `<div class="cf-filter-row-drag-layer__actions">${SWITCHER_ON_SVG_HTML}</div>`
-        : '<div class="cf-filter-row-drag-layer__actions" aria-hidden="true"></div>';
-
-      const layer = document.createElement("div");
-      layer.className = "cf-filter-row-drag-layer";
-      layer.setAttribute("role", "presentation");
-      layer.innerHTML = [
-        '<div class="cf-filter-row-drag-layer__inner">',
-        `<div class="cf-filter-row-drag-layer__grip" aria-hidden="true">${FILTER_DRAG_GRIP_SVG_HTML}</div>`,
-        '<div class="cf-filter-row-drag-layer__text">',
-        '<span class="cf-filter-row-drag-layer__label"></span>',
-        '<span class="cf-filter-row-drag-layer__desc"></span>',
-        "</div>",
-        actionsHtml,
-        "</div>",
-      ].join("");
-      layer.querySelector(".cf-filter-row-drag-layer__label").textContent = label;
-      layer.querySelector(".cf-filter-row-drag-layer__desc").textContent = desc;
-
-      const ox = e.clientX - rect.left;
-      const oy = e.clientY - rect.top;
-      dragOffsetRef.current = { x: ox, y: oy };
-
-      Object.assign(layer.style, {
-        position: "fixed",
-        left: `${e.clientX - ox}px`,
-        top: `${e.clientY - oy}px`,
-        width: `${rect.width}px`,
-        zIndex: "10050",
-        pointerEvents: "none",
-        boxSizing: "border-box",
-      });
+      const { layer } = buildFilterDragLayer(row);
+      positionFilterDragLayer(layer, e.clientX, e.clientY, offset);
       document.body.appendChild(layer);
       dragLayerRef.current = layer;
 
-      const hide = new Image();
-      hide.src =
-        "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
-      try {
-        e.dataTransfer.setDragImage(hide, 0, 0);
-      } catch {
-        /* ignore */
-      }
+      setDraggingId(filterId);
+      setPreviewIds(startIds);
 
-      const onDrag = (ev) => {
+      const resolveTargetId = (clientX, clientY) => {
+        const under = document.elementFromPoint(clientX, clientY);
+        const targetRow = under?.closest?.(".cf-filter-row[data-filter-id]");
+        return targetRow?.getAttribute("data-filter-id") ?? null;
+      };
+
+      const finishDrag = () => {
+        if (ended) return;
+        ended = true;
+        dragMoveCleanupRef.current?.();
+        dragMoveCleanupRef.current = null;
+        onActiveFilterIdsChange(latestPreview);
+        if (filterId && latestPreview.join(",") !== startIds.join(",")) {
+          setSelectedPreset(null);
+        }
+        dragItemId.current = null;
+        setDraggingId(null);
+        setPreviewIds(null);
+        tearDownFilterDragUi();
+      };
+
+      const onMove = (ev) => {
         const el = dragLayerRef.current;
         if (!el) return;
-        if (ev.clientX === 0 && ev.clientY === 0) return;
-        el.style.left = `${ev.clientX - dragOffsetRef.current.x}px`;
-        el.style.top = `${ev.clientY - dragOffsetRef.current.y}px`;
+        positionFilterDragLayer(el, ev.clientX, ev.clientY, offset);
+        const targetId = resolveTargetId(ev.clientX, ev.clientY);
+        const srcId = dragItemId.current;
+        if (!targetId || !srcId || targetId === srcId) return;
+        latestPreview = computePreview(latestPreview, srcId, targetId);
+        setPreviewIds(latestPreview);
       };
-      row.addEventListener("drag", onDrag);
-      dragMoveCleanupRef.current = () => row.removeEventListener("drag", onDrag);
 
-      setDraggingId(filterId);
-      setPreviewIds((prev) => prev ?? [...activeFilterIds]);
+      const onUp = () => finishDrag();
+
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onUp, { once: true });
+      window.addEventListener("pointercancel", onUp, { once: true });
+      dragMoveCleanupRef.current = () => {
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", onUp);
+        window.removeEventListener("pointercancel", onUp);
+      };
     },
-    [activeFilterIds]
+    [activeFilterIds, computePreview, onActiveFilterIdsChange, tearDownFilterDragUi]
   );
-
-  const handleDragEnd = useCallback(() => {
-    tearDownFilterDragUi();
-    onActiveFilterIdsChange((prev) => previewIds ?? prev);
-    dragItemId.current = null;
-    setDraggingId(null);
-    setPreviewIds(null);
-  }, [previewIds, onActiveFilterIdsChange, tearDownFilterDragUi]);
-
-  const handleDragOver = useCallback(
-    (e, filterId) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "move";
-      const srcId = dragItemId.current;
-      if (!srcId || srcId === filterId) return;
-      setPreviewIds((prev) => computePreview(prev ?? activeFilterIds, srcId, filterId));
-    },
-    [activeFilterIds, computePreview]
-  );
-
-  const handleDrop = useCallback((e, targetId) => {
-    e.preventDefault();
-    const srcId = dragItemId.current;
-    if (srcId && srcId !== targetId) setSelectedPreset(null);
-    // actual commit happens in handleDragEnd
-  }, []);
 
   /* Search: filter by name AND description */
   const q = searchQuery.trim().toLowerCase();
@@ -2670,7 +2939,7 @@ function CustomizeFiltersPopover({
                           className="cf-filter-section__action"
                           onClick={clearAll}
                         >
-                          Clear all
+                          Clear
                         </button>
                       </div>
                     </div>
@@ -2678,6 +2947,7 @@ function CustomizeFiltersPopover({
                       {filteredAdded.map((f) => (
                         <div
                           key={f.id}
+                          data-filter-id={f.id}
                           className={[
                             "cf-filter-row",
                             draggingId === f.id ? "cf-filter-row--dragging" : "",
@@ -2685,31 +2955,10 @@ function CustomizeFiltersPopover({
                           ]
                             .filter(Boolean)
                             .join(" ")}
-                          draggable
-                          onDragStart={(e) => handleDragStart(e, f.id)}
-                          onDragEnd={handleDragEnd}
-                          onDragOver={(e) => handleDragOver(e, f.id)}
-                          onDrop={(e) => handleDrop(e, f.id)}
                         >
                           <div
                             className="cf-filter-row__drag"
-                            onMouseDown={(ev) => {
-                              if (ev.button !== 0) return;
-                              document.documentElement.classList.add("cf-filter-dnd-active");
-                              document.documentElement.style.setProperty("cursor", "grabbing", "important");
-                              document.body.style.setProperty("cursor", "grabbing", "important");
-                              const onUp = () => {
-                                window.removeEventListener("mouseup", onUp);
-                                queueMicrotask(() => {
-                                  if (dragItemId.current == null) {
-                                    document.documentElement.classList.remove("cf-filter-dnd-active");
-                                    document.documentElement.style.removeProperty("cursor");
-                                    document.body.style.removeProperty("cursor");
-                                  }
-                                });
-                              };
-                              window.addEventListener("mouseup", onUp, { once: true });
-                            }}
+                            onPointerDown={(ev) => handleGripPointerDown(ev, f.id)}
                           >
                             <DragHandleIcon />
                           </div>
@@ -2992,14 +3241,14 @@ function highlightMatch(text, q) {
 }
 
 function readInitialActiveId() {
-  return "dashboard";
+  return "orders";
 }
 
 export default function App() {
   const navSections = NAV_SECTIONS_V2;
   const searchIndex = useMemo(() => buildSearchIndex(navSections), [navSections]);
   const [activeId, setActiveId] = useState(readInitialActiveId);
-  const [expanded, setExpanded] = useState(() => new Set());
+  const [expanded, setExpanded] = useState(() => new Set(["payments"]));
   const [query, setQuery] = useState("");
   const [recentItems, setRecentItems] = useState(loadRecent);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => readSidebarCollapsed());
@@ -3624,16 +3873,11 @@ export default function App() {
           <div className="main-view visible" id="main-view">
             <header className="page-header page-header--main">
               <div className="page-header-primary">
-                <h1 className="page-title">Orders</h1>
+                <h1 className="page-title">{meta.label}</h1>
                 <a className="page-doc-link page-doc-link--sm" href="#">
                   <span className="page-doc-link__text">How orders works</span>
                   <SideIcon icon={ExternalLinkGlyph} className="page-doc-link__icon" />
                 </a>
-                {meta?.parentLabel && (
-                  <span className="page-breadcrumb">
-                    {meta.parentLabel} / {meta.label}
-                  </span>
-                )}
               </div>
               <button type="button" className="page-primary-btn page-primary-btn--active">
                 <SideIcon icon={PlusGlyph} />
@@ -3922,7 +4166,6 @@ export default function App() {
           }
           onLiveDraft={handleDatePopoverLiveDraft}
           onApply={(fromValue, toValue, mode) => applyDatePopover(datePopover.field, fromValue, toValue, mode)}
-          onReset={() => resetDatePopoverField(datePopover.field)}
           onClose={() => setDatePopover(null)}
         />
       )}

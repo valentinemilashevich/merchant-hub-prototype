@@ -767,7 +767,7 @@ body {
 .page-header-primary {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 2px;
   min-width: 0;
   padding: 0;
 }
@@ -1163,7 +1163,7 @@ html,
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: var(--fp-toolbar-gap);
+  gap: var(--space-300); /* 12px */
   width: 100%;
   min-width: 0;
 }
@@ -1191,7 +1191,7 @@ html,
   height: var(--btn-height-md);
   padding: 0 var(--space-200);
   border: 1px solid rgba(0, 0, 0, 0.12);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   background: var(--color-soft-100);
   color: var(--color-dense-900);
   font: var(--font-body-medium);
@@ -1616,26 +1616,25 @@ html,
 
 /* ═════════════════════════════════════════════
    Date Filter Popover
-   Figma: Filters → Calendar update / Between
+   Figma Unit UI Kit — Date Time (14248:111352), Day (886:36266), Button group v2 (14133:27466)
    ═════════════════════════════════════════════ */
 
+/* Figma frame 728×472 — content box so 1px border does not shrink calendar (576) or presets (152) */
 .df-popover {
   position: fixed;
   z-index: 620;
-  width: 748px;
-  height: 512px;
+  display: flex;
+  flex-direction: column;
+  width: 728px;
+  height: 472px;
   background: var(--color-soft-100);
-  /* Hairline via shadow so height:512 is full inner area (1px border steals 2px → body was 453 / 454). */
-  border: none;
+  border: 1px solid var(--color-dense-900-opacity-300);
   border-radius: var(--radius-lg);
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.08),
-    0px 6px 8px -6px rgba(0, 0, 0, 0.12),
-    0px 8px 16px -6px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-lg);
   overflow: hidden;
   opacity: 0;
   pointer-events: none;
-  box-sizing: border-box;
+  box-sizing: content-box;
 }
 
 .df-popover--visible {
@@ -1646,37 +1645,27 @@ html,
 .df-popover__main {
   display: flex;
   align-items: stretch;
+  flex: 1 1 auto;
+  min-height: 0;
   width: 100%;
-  height: 100%;
+  height: 416px;
 }
 
 .df-presets {
-  width: 180px;
+  width: 152px;
   flex-shrink: 0;
   background: var(--color-soft-100);
-  border-right: 1px solid rgba(0, 0, 0, 0.08);
-  padding: var(--space-400);
+  border-right: 1px solid var(--color-dense-900-opacity-300);
+  padding: var(--space-500) var(--space-400);
   box-sizing: border-box;
-}
-
-.df-preset-heading {
-  display: flex;
-  align-items: center;
-  height: 24px;
-  padding: 0 var(--space-200);
-  font: var(--font-caption-normal);
-  font-weight: var(--fw-medium);
-  color: var(--color-dense-900);
-  letter-spacing: 0.12px;
-  font-feature-settings: var(--font-feature);
-  box-sizing: border-box;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .df-preset-list {
   display: flex;
   flex-direction: column;
   gap: var(--space-100);
-  margin-top: var(--space-200);
 }
 
 .df-preset-item {
@@ -1700,10 +1689,9 @@ html,
 }
 
 .df-calendar {
-  /* 748px popover − 180px presets — two months (Figma 455:17017: 7×36px cells, 252px-wide grid) + gap + pad */
-  flex: 0 0 568px;
-  width: 568px;
-  min-width: 0;
+  flex: 0 0 576px;
+  width: 576px;
+  min-width: 576px;
   min-height: 0;
   box-sizing: border-box;
   display: flex;
@@ -1711,94 +1699,130 @@ html,
   background: var(--color-soft-100);
 }
 
-/* Figma calendar column: 456px content + 56px footer = 512px (no internal scroll). */
 .df-calendar__body {
-  flex: 0 0 456px;
-  width: 568px;
-  height: 456px;
-  min-height: 456px;
-  max-height: 456px;
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: var(--space-600);
-  padding-bottom: 0;
+  padding: var(--space-500);
   box-sizing: border-box;
-  overflow-x: hidden;
-  overflow-y: hidden;
+  overflow: hidden;
 }
 
-/* Figma 455:16999 — months + date fields: vertical gap 16px; height hugs content */
 .df-calendar__stack {
   display: flex;
   flex-direction: column;
-  gap: var(--space-400);
-  flex: 0 0 auto;
+  gap: var(--space-500);
+  flex: 1 1 auto;
+  min-height: 0;
   align-self: stretch;
   width: 100%;
   box-sizing: border-box;
 }
 
 .df-mode {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-200);
-  padding: var(--space-400) var(--space-500) 0;
-  box-sizing: border-box;
-}
-
-.df-mode__label {
-  display: flex;
-  align-items: center;
-  height: 24px;
-  padding: 0;
-  font: var(--font-caption-normal);
-  font-weight: var(--fw-medium);
-  color: var(--color-dense-900);
-  letter-spacing: 0.12px;
-  font-feature-settings: var(--font-feature);
+  flex-shrink: 0;
+  width: 100%;
 }
 
 .df-mode__group {
   position: relative;
   isolation: isolate;
   display: flex;
+  align-items: stretch;
+  gap: 2px;
   width: 100%;
   height: 32px;
-  border: 1px solid var(--color-soft-600);
-  border-radius: var(--radius-sm);
-  background: var(--color-soft-100);
-  box-shadow: var(--shadow-sm);
-  overflow: hidden;
+  padding: 2px;
   box-sizing: border-box;
 }
 
+.df-mode__bg {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: var(--radius-md);
+  background: var(--color-soft-400);
+  pointer-events: none;
+}
+
 .df-mode__btn {
-  flex: 1 1 0;
-  min-width: 0;
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
   height: 100%;
-  padding: var(--space-100) var(--space-200);
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--color-dense-900);
-  font: var(--font-label-medium);
   cursor: pointer;
+  padding: 2px var(--space-200);
+  font: var(--font-label-medium);
+  line-height: var(--lh-300);
   font-feature-settings: var(--font-feature);
+  box-sizing: border-box;
+}
+
+/* Figma Button Group v2 (14248:112365) — Single / Range wrappers */
+.df-mode__btn--primary {
+  flex: 0 0 131.5px;
+  width: 131.5px;
+}
+
+/* Figma — Additional buttons slot (Before / After) */
+.df-mode__slot {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex: 0 0 257px;
+  width: 257px;
+  align-items: stretch;
+  gap: 2px;
+}
+
+.df-mode__slot .df-mode__btn {
+  flex: 0 0 127.5px;
+  width: 127.5px;
+}
+
+.df-mode__btn:hover:not(.is-selected) {
+  background: var(--color-soft-200);
+}
+
+.df-mode__btn:active:not(.is-selected) {
+  background: var(--color-soft-500);
 }
 
 .df-mode__btn.is-selected {
-  background: var(--unit-color-accent-200);
-  box-shadow: inset 0 0 0 2px var(--unit-color-accent-700);
+  background: var(--color-soft-100);
+  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.12);
+}
+
+.df-mode__btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0, 114, 224, 0.32);
+}
+
+.df-mode__btn.is-selected:focus-visible {
+  box-shadow:
+    0 2px 2px rgba(0, 0, 0, 0.12),
+    0 0 0 2px rgba(0, 114, 224, 0.32);
 }
 
 .df-months {
   display: flex;
-  gap: var(--space-400);
-  padding: 0 var(--space-500);
+  gap: var(--space-500);
   box-sizing: border-box;
 }
 
 .df-month {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-200);
   width: 252px;
   flex-shrink: 0;
 }
@@ -1809,7 +1833,6 @@ html,
   justify-content: space-between;
   gap: var(--space-100);
   height: 24px;
-  padding: 0 var(--space-200);
   box-sizing: border-box;
 }
 
@@ -1836,12 +1859,11 @@ html,
   justify-content: center;
   width: 24px;
   height: 24px;
-  padding: 0;
+  padding: var(--space-100);
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--color-dense-900);
-  font: var(--font-label-medium);
   cursor: pointer;
 }
 
@@ -1851,6 +1873,8 @@ html,
 
 .df-month__nav .icon {
   color: inherit;
+  width: 16px;
+  height: 16px;
 }
 
 .df-month__nav--next .icon {
@@ -1858,29 +1882,26 @@ html,
 }
 
 .df-day--beyond-now {
-  opacity: 0.38;
+  color: var(--color-soft-800);
   cursor: not-allowed;
   pointer-events: none;
 }
 
-/* Allowed interval — Before / After (Figma: fill accent/300, inside stroke soft/100, без тіней) */
 .df-day--zone-before:not(.df-day--outside),
 .df-day--zone-after:not(.df-day--outside) {
-  box-shadow: none;
-  border: 1px solid var(--unit-color-soft-100);
-  background: var(--unit-color-accent-300);
+  background: var(--color-soft-300);
+  border-color: var(--color-soft-100);
 }
 
 .df-day--zone-before:not(.df-day--outside):hover,
 .df-day--zone-after:not(.df-day--outside):hover {
-  background: var(--unit-color-accent-300);
+  background: var(--color-soft-300);
 }
 
 .df-days {
   display: flex;
   flex-wrap: wrap;
   width: 252px;
-  margin-top: var(--space-200);
 }
 
 .df-day {
@@ -1891,11 +1912,9 @@ html,
   width: 36px;
   height: 36px;
   padding: 0;
-  border: none;
-  border-radius: 6px;
+  border: 1px solid var(--color-soft-100);
+  border-radius: var(--radius-md);
   box-sizing: border-box;
-  /* Inside stroke — unit Soft 100 / 1px (Figma day cell) */
-  box-shadow: inset 0 0 0 1px var(--unit-color-soft-100);
   background: var(--color-soft-100);
   color: var(--color-dense-900);
   font: var(--font-label-medium);
@@ -1904,36 +1923,53 @@ html,
   font-feature-settings: "case" 1;
 }
 
-.df-day:hover {
-  background: var(--color-soft-300);
+.df-day:hover:not(:disabled):not(.df-day--beyond-now):not(.df-day--selected) {
+  background: var(--color-soft-400);
+}
+
+.df-day:active:not(:disabled):not(.df-day--beyond-now):not(.df-day--selected) {
+  background: var(--color-soft-500);
+}
+
+.df-day:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1.8px rgba(27, 143, 234, 0.32);
 }
 
 .df-day--outside {
   color: var(--color-soft-800);
 }
 
-.df-day--range {
-  background: var(--unit-color-accent-200);
+.df-day--range:not(.df-day--selected) {
+  background: var(--color-soft-300);
+  border-color: var(--color-soft-100);
 }
 
 .df-day--selected {
-  background: var(--unit-color-accent-300);
-  color: var(--color-dense-900);
+  background: var(--color-dense-900);
+  border-color: var(--color-soft-100);
+  color: var(--color-soft-100);
 }
 
-/* Today marker — Unit UI Kit / Figma 7213:4994: 6×6px dot, inset 4px from top & right */
+/* Figma Day 886:36279 — Selected hover */
+.df-day--selected:hover:not(:disabled):not(.df-day--beyond-now),
+.df-day--selected:active:not(:disabled):not(.df-day--beyond-now) {
+  background: var(--color-dense-700);
+  border-color: var(--color-soft-100);
+  color: var(--color-soft-100);
+}
+
 .df-day--today::after {
   content: "";
   position: absolute;
-  top: 4px;
-  right: 4px;
-  left: auto;
-  bottom: auto;
-  width: 6px;
-  height: 6px;
+  top: calc(50% - 12px);
+  left: calc(50% + 12px);
+  width: 4px;
+  height: 4px;
   margin: 0;
   border-radius: 50%;
   background: var(--color-burgundy-700);
+  transform: translate(-50%, -50%);
   pointer-events: none;
   z-index: 1;
 }
@@ -1945,82 +1981,253 @@ html,
 
 .df-date-fields {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
   box-sizing: border-box;
   width: 100%;
-  padding: 0 var(--space-500) var(--space-500);
-}
-
-.df-date-fields--single {
-  gap: var(--space-400);
-  align-items: center;
-}
-
-.df-single-time-group {
-  display: flex;
-  flex: 0 0 252px;
-  width: 252px;
-  min-width: 0;
-  gap: var(--space-200);
-  align-items: center;
-}
-
-.df-single-time-group > .df-popover-textfield.unit-textfield {
-  flex: 1 1 0;
-  min-width: 0;
-}
-
-.df-date-fields--range {
-  gap: var(--space-400);
-}
-
-.df-date-fields--range > .df-date-range-column {
-  flex: 1 1 0;
-  min-width: 0;
-}
-
-.df-date-range-column {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  flex: 1 1 0;
-}
-
-.df-date-range-row {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: var(--space-200);
-  width: auto;
-  max-width: 100%;
-  align-self: flex-start;
-  min-width: 0;
-}
-
-/* Date popover — Unit Textfield + segmented value (Figma Filters) */
-.df-popover .df-popover-textfield.unit-textfield {
-  flex: 1 1 0;
-  min-width: 0;
-}
-
-/* Fixed-width date column — must beat generic flex: 1 above or the row stretches (~276px vs Figma 252). */
-.df-popover .df-popover-textfield.df-popover-textfield--date-fixed.unit-textfield {
-  flex: 0 0 auto;
-  width: 252px;
   flex-shrink: 0;
 }
 
-.df-popover .df-popover-textfield .unit-textfield__label {
+.df-date-fields--single {
+  gap: var(--space-500);
+}
+
+.df-single-time-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+/* Figma Fields 14289:7773 — time-only 70×32 */
+.df-inline-field--time-only {
+  width: 70px;
+  min-width: 70px;
+  flex: 0 0 70px;
+  height: 32px;
+  min-height: 32px;
+}
+
+.df-inline-field--time-only .df-inline-field__time {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  border-left: none;
+}
+
+/* Figma Main Field — date-only 116×32 */
+.df-inline-field--date-only {
+  width: 116px;
+  min-width: 116px;
+  flex: 0 0 116px;
+}
+
+.df-inline-field--date-only .df-inline-field__date {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+}
+
+/* Figma Fields 14248:112469 — date+time 186×32 */
+.df-inline-field:not(.df-inline-field--time-only):not(.df-inline-field--date-only) {
+  width: 186px;
+  min-width: 186px;
+  flex: 0 0 186px;
+}
+
+.df-inline-field--time-only .df-seg-time {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.df-field-sep,
+.df-field-mode-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding: 0 var(--space-100);
   font: var(--font-caption-normal);
-  font-weight: var(--fw-medium);
-  line-height: 16px;
-  color: var(--color-dense-900);
   letter-spacing: 0.12px;
+  color: var(--color-dense-200);
+  flex-shrink: 0;
+}
+
+.df-date-fields--range {
+  justify-content: center;
+}
+
+.df-inline-field {
+  display: inline-flex;
+  align-items: stretch;
+  height: 32px;
+  min-height: 32px;
+  background: var(--color-soft-100);
+  border: none;
+  border-radius: var(--radius-md);
+  box-shadow:
+    var(--shadow-sm),
+    inset 0 0 0 1px var(--color-soft-500);
+  overflow: hidden;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+/* Figma Main Field — 116×32 */
+.df-inline-field__date {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  flex: 0 0 116px;
+  width: 116px;
+  min-width: 116px;
+  height: 32px;
+  min-height: 32px;
+  padding: var(--space-100) var(--space-300);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* Figma Split Right — 70×32 */
+.df-inline-field__time {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  flex: 0 0 70px;
+  width: 70px;
+  min-width: 70px;
+  height: 32px;
+  min-height: 32px;
+  padding: var(--space-100) var(--space-300);
+  box-sizing: border-box;
+  border-left: 1px solid var(--color-soft-600);
+  overflow: hidden;
+}
+
+/* Inline segmented controls — Figma Date Time popover fields */
+.df-popover .df-inline-field .df-seg-date--embedded,
+.df-popover .df-inline-field .df-seg-time {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0;
+  white-space: nowrap;
+}
+
+.df-popover .df-inline-field .df-seg-date__inp,
+.df-popover .df-inline-field .df-seg-time__inp,
+.df-popover .df-inline-field .df-seg-time__sep {
+  height: var(--lh-300);
+  min-height: var(--lh-300);
+  max-height: var(--lh-300);
+  line-height: var(--lh-300);
+  padding: 0;
   font-feature-settings: var(--font-feature);
 }
 
+.df-popover .df-inline-field .df-seg-date__inp {
+  font: var(--font-body-normal);
+  line-height: var(--lh-300);
+  text-align: center;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.df-popover .df-inline-field .df-seg-time__inp {
+  font: var(--font-label-normal);
+  line-height: var(--lh-300);
+  text-align: center;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.df-popover .df-inline-field .df-seg-date__inp--dd,
+.df-popover .df-inline-field .df-seg-date__inp--mm {
+  width: 20px;
+  min-width: 20px;
+  flex: 0 0 20px;
+}
+
+.df-popover .df-inline-field .df-seg-date__inp--yyyy {
+  width: 36px;
+  min-width: 36px;
+  flex: 0 0 36px;
+}
+
+.df-popover .df-inline-field .df-seg-date__inp:placeholder-shown {
+  font: var(--font-body-normal);
+  color: var(--color-dense-200);
+}
+
+.df-popover .df-inline-field .df-seg-date__inp::placeholder {
+  color: var(--color-dense-200);
+  font-weight: var(--fw-normal);
+}
+
+.df-popover .df-inline-field .df-seg-date__inp:not(:placeholder-shown) {
+  font: var(--font-label-medium);
+  color: var(--color-dense-900);
+}
+
+.df-popover .df-inline-field .df-seg-date__sep {
+  width: 8px;
+  flex: 0 0 8px;
+  color: var(--color-soft-800);
+}
+
+.df-popover .df-inline-field .df-seg-time__inp--hh {
+  width: 18px;
+  min-width: 18px;
+  flex: 0 0 18px;
+}
+
+.df-popover .df-inline-field .df-seg-time__inp--mm {
+  width: 20px;
+  min-width: 20px;
+  flex: 0 0 20px;
+}
+
+.df-popover .df-inline-field .df-seg-time:not(.df-seg-time--default-placeholder) .df-seg-time__inp {
+  font: var(--font-label-medium);
+  line-height: var(--lh-300);
+  color: var(--color-dense-900);
+}
+
+.df-popover .df-inline-field .df-seg-time.df-seg-time--default-placeholder .df-seg-time__inp,
+.df-popover .df-inline-field .df-seg-time.df-seg-time--default-placeholder .df-seg-time__inp:not(:placeholder-shown) {
+  font: var(--font-label-normal);
+  line-height: var(--lh-300);
+  color: var(--color-dense-200);
+}
+
+.df-popover .df-inline-field .df-seg-time__sep {
+  width: 8px;
+  flex: 0 0 8px;
+  display: block;
+  font: var(--font-label-normal);
+  line-height: var(--lh-300);
+  text-align: center;
+  color: var(--color-dense-200);
+}
+
+/* Filled time — ":" stays dense-200 per Figma placeholder tone on range fields */
+.df-popover .df-inline-field .df-seg-time:not(.df-seg-time--default-placeholder) .df-seg-time__sep {
+  color: var(--color-dense-200);
+}
+
+.df-popover .df-inline-field .df-seg-time__inp,
+.df-popover .df-inline-field .df-seg-time__sep {
+  line-height: var(--lh-300);
+}
+
 .df-popover-empty-label {
-  /* Block: inline-block kept baseline strut → ~19px row; Figma caption row = 16px */
   display: block;
   height: 16px;
   min-height: 16px;
@@ -2031,114 +2238,6 @@ html,
   overflow: hidden;
   opacity: 0;
   flex-shrink: 0;
-}
-
-/* Widths — Figma Filters file fyTKqJ4nUo7kBuC938jd2F:
-   • Single Date column 479:29833 — outline fills column; calendar strip uses 252px column next to times.
-   • Between 485:30974 — date outline 151px, time outline 93px, gap space-200 inside pair; gap space-400 between From/To.
-   • After / Before 485:31358 — date 252px, time 252px.
-   Between time mock shows HH:MM only (93px); Range mode omits second segments to match (packed values still use :00 seconds). */
-
-/* Between (Range): date + time per side — Figma 485:30974 */
-.df-popover .df-popover-textfield.df-popover-textfield--range-date.unit-textfield {
-  flex: 0 0 auto;
-  width: 151px;
-}
-
-.df-popover .df-popover-textfield.df-popover-textfield--range-time.unit-textfield {
-  flex: 0 0 auto;
-  width: 93px;
-}
-
-/* After / Before — Date + Time row matching Single widths (Figma 485:31358) */
-.df-popover .df-popover-textfield.df-popover-textfield--pair-datetime-time.unit-textfield {
-  flex: 0 0 auto;
-  width: 252px;
-}
-
-/* Date filter popover — layout vs segment glyphs:
-   • .unit-textfield__field — flex justify defaults to center only where no segmented date/time rule applies below.
-   • Segmented date/time Unit Textfields — field row MUST stay flex-start (icon + segments from the start):
-     --date-fixed, --range-date, --range-time, --pair-datetime-time, and Single-mode times inside .df-single-time-group.
-     Do not delete or “re-center” without design approval.
-   • .df-seg-date__inp / .df-seg-time__inp — text-align:center inside each segment is PRODUCT LOCK (see rule block below); do not switch to start/end alignment without approval. */
-.df-popover .unit-textfield__field {
-  min-width: 0;
-  justify-content: center;
-}
-
-.df-popover .df-popover-textfield.df-popover-textfield--date-fixed .unit-textfield__field,
-.df-popover .df-popover-textfield.df-popover-textfield--range-date .unit-textfield__field,
-.df-popover .df-popover-textfield.df-popover-textfield--range-time .unit-textfield__field,
-.df-popover .df-popover-textfield.df-popover-textfield--pair-datetime-time .unit-textfield__field,
-.df-popover .df-single-time-group > .df-popover-textfield.unit-textfield .unit-textfield__field {
-  justify-content: flex-start;
-}
-
-.df-popover .df-seg-date--embedded {
-  flex: 0 0 auto;
-  min-width: auto;
-  justify-content: center;
-}
-
-.df-popover .df-seg-time {
-  justify-content: center;
-}
-
-.df-popover .df-seg-time--embed-fill {
-  flex: 0 0 auto;
-  min-width: max-content;
-  max-width: 100%;
-}
-
-.df-popover .df-seg-time .df-seg-time__inp {
-  flex-shrink: 0;
-  position: relative;
-  z-index: 1;
-}
-
-.df-popover .df-seg-time:not(.df-seg-time--embed-fill) {
-  flex: 0 0 auto;
-}
-
-/* PRODUCT LOCK — centered glyphs in segmented date / time (digit placeholders) */
-.df-popover .df-seg-date__inp,
-.df-popover .df-seg-time__inp {
-  font: var(--font-body-normal);
-  text-align: center;
-}
-
-.df-popover .df-seg-date__inp:not(:placeholder-shown),
-.df-popover .df-seg-time__inp:not(:placeholder-shown) {
-  font: var(--font-label-medium);
-}
-
-.df-popover .df-seg-date__inp {
-  color: var(--color-dense-900);
-}
-
-.df-popover .df-seg-time__inp {
-  color: var(--color-dense-900);
-}
-
-.df-popover .df-seg-date.is-placeholder .df-seg-date__inp,
-.df-popover .df-seg-date__inp::placeholder,
-.df-popover .df-seg-time__inp::placeholder {
-  color: var(--color-dense-200);
-  font-weight: 400;
-}
-
-.df-popover .df-seg-date__sep,
-.df-popover .df-seg-time__sep {
-  color: var(--color-soft-800);
-}
-
-/* Model is 00:00:00 and user has not edited yet — same tone/weight as placeholders. */
-.df-popover .df-seg-time.df-seg-time--default-zero .df-seg-time__inp,
-.df-popover .df-seg-time.df-seg-time--default-zero .df-seg-time__inp:not(:placeholder-shown) {
-  font: var(--font-body-normal);
-  font-weight: var(--fw-normal);
-  color: var(--color-dense-200);
 }
 
 .df-date-field {
@@ -2324,10 +2423,15 @@ html,
 .df-seg-date__sep {
   width: 5px;
   flex: 0 0 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--lh-300);
+  line-height: 1;
+  vertical-align: middle;
   text-align: center;
   font: var(--font-body-normal);
   color: var(--color-soft-800);
-  line-height: var(--lh-300);
   user-select: none;
   pointer-events: none;
 }
@@ -2335,11 +2439,24 @@ html,
 /* Time segments — same weight/color pattern as date: placeholder faint, typed dense-900 + medium */
 .df-seg-time {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   gap: 1px;
   flex-shrink: 0;
   box-sizing: border-box;
+}
+
+/* Figma Split Right — shared 24px text row for digits and ":" (14248:112476) */
+.df-seg-time__inp,
+.df-seg-time__sep {
+  height: var(--lh-300);
+  min-height: var(--lh-300);
+  max-height: var(--lh-300);
+  line-height: var(--lh-300);
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+  font-feature-settings: var(--font-feature);
 }
 
 .df-seg-time__inp {
@@ -2348,20 +2465,18 @@ html,
   width: 20px;
   min-width: 20px;
   flex: 0 0 20px;
-  margin: 0;
-  padding: 0;
-  font: var(--font-body-normal);
+  font: var(--font-label-normal);
   color: var(--color-dense-900);
   text-align: center;
   font-variant-numeric: tabular-nums;
   outline: none;
-  box-sizing: border-box;
-  line-height: var(--lh-300);
-  font-feature-settings: var(--font-feature);
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 .df-seg-time__inp:not(:placeholder-shown) {
   font: var(--font-label-medium);
+  line-height: var(--lh-300);
 }
 
 .df-seg-time__inp::placeholder {
@@ -2374,20 +2489,42 @@ html,
 }
 
 /* Default time from model before first edit — looks like placeholders. */
+.df-seg-time.df-seg-time--default-placeholder .df-seg-time__inp,
+.df-seg-time.df-seg-time--default-placeholder .df-seg-time__inp:not(:placeholder-shown),
 .df-seg-time.df-seg-time--default-zero .df-seg-time__inp,
-.df-seg-time.df-seg-time--default-zero .df-seg-time__inp:not(:placeholder-shown) {
-  font: var(--font-body-normal);
-  font-weight: var(--fw-normal);
+.df-seg-time.df-seg-time--default-zero .df-seg-time__inp:not(:placeholder-shown),
+.df-seg-time.df-seg-time--default-eod .df-seg-time__inp,
+.df-seg-time.df-seg-time--default-eod .df-seg-time__inp:not(:placeholder-shown) {
+  font: var(--font-label-normal);
+  line-height: var(--lh-300);
   color: var(--color-dense-200);
 }
 
+/* font shorthand resets line-height — keep digits and ":" on the same 24px row */
+.df-seg-time__inp,
 .df-seg-time__sep {
-  width: 5px;
-  flex: 0 0 5px;
-  text-align: center;
-  font: var(--font-body-normal);
-  color: var(--color-dense-200);
   line-height: var(--lh-300);
+}
+
+.df-seg-time__inp--hh {
+  width: 18px;
+  min-width: 18px;
+  flex: 0 0 18px;
+}
+
+.df-seg-time__inp--mm {
+  width: 20px;
+  min-width: 20px;
+  flex: 0 0 20px;
+}
+
+.df-seg-time__sep {
+  width: 8px;
+  flex: 0 0 8px;
+  display: block;
+  font: var(--font-label-normal);
+  text-align: center;
+  color: var(--color-dense-200);
   user-select: none;
   pointer-events: none;
 }
@@ -2406,10 +2543,48 @@ html,
   align-items: center;
   justify-content: flex-end;
   gap: var(--space-200);
-  padding: 0 var(--space-400);
+  padding: var(--space-300) var(--space-400);
   box-sizing: border-box;
   background: var(--color-soft-100);
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  border-top: 1px solid var(--color-dense-900-opacity-300);
+}
+
+.df-footer__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  height: var(--btn-height-md);
+  min-height: var(--btn-height-md);
+  padding: 0 calc(var(--space-200) + var(--space-100));
+  border: none;
+  border-radius: var(--radius-sm);
+  font: var(--font-label-medium);
+  font-feature-settings: var(--font-feature);
+  line-height: var(--lh-300);
+  white-space: nowrap;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.df-footer__btn--secondary {
+  background: var(--color-soft-100);
+  border: 1px solid var(--color-dense-900-opacity-400);
+  color: var(--color-dense-900);
+  box-shadow: var(--shadow-sm);
+}
+
+.df-footer__btn--secondary:hover {
+  border-color: var(--color-dense-900-opacity-500);
+}
+
+.df-footer__btn--primary {
+  background: var(--color-dense-900);
+  color: var(--color-soft-100);
+}
+
+.df-footer__btn--primary:hover {
+  background: var(--color-dense-800);
 }
 
 .filters-customize {
@@ -2692,20 +2867,23 @@ button[data-slot="button"].filters-reset:disabled {
   color: #fff;
 }
 
-/* ── Doc link — small variant from Figma ── */
+/* ── Doc link — small variant (matches cf-filter-section__action) ── */
 .page-doc-link--sm {
-  font-size: 12px;
-  line-height: 16px;
+  font: var(--font-caption-normal);
   letter-spacing: 0.12px;
-  color: var(--color-dense-400);
+  color: var(--color-dense-200);
+  text-decoration: none;
+  transition: color 100ms ease;
 }
 .page-doc-link--sm:hover {
-  color: var(--color-dense-600);
+  color: var(--color-dense-900);
+  text-decoration: none;
 }
 .page-doc-link--sm .page-doc-link__icon {
-  color: var(--color-dense-400);
+  color: currentColor;
   width: 12px;
   height: 12px;
+  transition: color 100ms ease;
 }
 
 /* ═════════════════════════════════════════════
@@ -3114,6 +3292,11 @@ button[data-slot="button"].filters-reset:disabled {
   flex-shrink: 0;
   width: 16px;
   cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.cf-filter-row__drag:not(.cf-filter-row__drag--empty):active {
+  cursor: grabbing;
 }
 .cf-filter-row__drag:not(.cf-filter-row__drag--empty) {
   opacity: 0;
