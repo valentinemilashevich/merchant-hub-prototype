@@ -27,7 +27,7 @@ body {
   width: 264px;
   height: 100vh;
   flex-shrink: 0;
-  transition: width 0.25s ease;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar-container.collapsed {
@@ -38,7 +38,7 @@ body {
    Panel shell
    ───────────────────────────────────────────── */
 .side-panel {
-  background: #ffffff;
+  background: var(--color-soft-100);
   width: 100%;
   height: 100vh;
   padding: var(--space-300);
@@ -47,6 +47,13 @@ body {
   gap: var(--space-400);
   position: relative;
   overflow: hidden;
+  border-right: 1px solid var(--color-dense-900-opacity-300);
+  transition:
+    border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-container.is-edge-hover .side-panel {
+  border-right-color: var(--color-dense-900-opacity-600);
 }
 
 /* ─────────────────────────────────────────────
@@ -737,7 +744,7 @@ body {
   display: none;
   flex-direction: column;
   gap: 0;
-  padding: 20px var(--space-700) var(--space-700);
+  padding: 20px var(--space-600) var(--space-700);
 }
 .main-view.visible {
   display: flex;
@@ -934,10 +941,14 @@ body {
   position: fixed;
   z-index: 500;
   display: none;
-  background: #ffffff;
+  background: var(--color-soft-100);
   border-radius: var(--radius-lg);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06);
-  padding: 4px;
+  /* Outside stroke — Figma Sidepanel 1409:11533 */
+  box-shadow:
+    0 0 0 1px var(--color-dense-900-opacity-300),
+    0 4px 16px rgba(0, 0, 0, 0.10),
+    0 1px 4px rgba(0, 0, 0, 0.06);
+  padding: var(--space-300);
   min-width: 180px;
 }
 
@@ -987,36 +998,53 @@ body {
 .nav-popover-item.active:focus-visible { background: #EBF5FF; color: #0378FF; }
 
 /* ─────────────────────────────────────────────
-   Collapse button
+   Sidebar edge affordance (Figma 1520:12474 / 1520:12569)
    ───────────────────────────────────────────── */
-.collapse-btn {
+/* Hit zone: right edge + 16px rail outside panel */
+.sidebar-edge-affordance {
   position: absolute;
-  left: calc(100% + 8px);
-  top: 50%;
-  transform: translateY(-50%);
-  width: 24px;
-  height: 24px;
+  top: 0;
+  right: -16px;
+  width: 16px;
+  height: 100%;
+  z-index: 6;
+}
+
+.sidebar-edge-rail {
+  position: absolute;
+  top: var(--space-400);
+  left: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: none;
-  background: none;
-  cursor: pointer;
-  border-radius: var(--radius-sm);
+  width: 16px;
+  height: calc(100% - var(--space-400) * 2);
   padding: 0;
-  z-index: 10;
-  flex-shrink: 0;
-  color: var(--color-dense-600);
-}
-.collapse-btn:hover { background: var(--color-grey-200); }
-.collapse-btn .collapse-btn-icon {
-  display: block;
-  flex-shrink: 0;
-  transition: transform 0.25s ease;
+  border: none;
+  cursor: pointer;
+  color: var(--color-dense-900);
+  background-color: var(--color-soft-200);
+  border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+  transform: scaleX(0);
+  transform-origin: left center;
+  opacity: 0.5;
+  pointer-events: none;
+  transition:
+    transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* One chevron: collapsed = expand affordance (side-panel-chi) */
-.sidebar-container.collapsed .collapse-btn .collapse-btn-icon {
+.sidebar-container.is-edge-hover .sidebar-edge-rail {
+  transform: scaleX(1);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.sidebar-edge-rail__icon {
+  flex-shrink: 0;
+}
+
+.sidebar-edge-rail__icon--expand {
   transform: rotate(180deg);
 }
 
@@ -1047,6 +1075,10 @@ body {
   flex-direction: column;
   align-items: center;
   gap: var(--space-200);
+  transition: flex-direction 0.3s cubic-bezier(0.4, 0, 0.2, 1), gap 0.3s ease;
+}
+.sidebar-container:not(.collapsed) .account-wrapper {
+  transition: flex-direction 0.3s cubic-bezier(0.4, 0, 0.2, 1), gap 0.3s ease;
 }
 .sidebar-container.collapsed .account-inner {
   flex: none;
@@ -1065,7 +1097,7 @@ body {
   width: 100%;
 }
 
-/* Hide all text, labels, search, submenus */
+/* Hide all text, labels, search, submenus when collapsed */
 .sidebar-container.collapsed .account-name-wrapper,
 .sidebar-container.collapsed .search-wrapper,
 .sidebar-container.collapsed .section-label,
@@ -1106,6 +1138,10 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 16px;
+  transition: flex-direction 0.3s ease, gap 0.3s ease;
+}
+.sidebar-container:not(.collapsed) .footer-row {
+  transition: flex-direction 0.3s ease, gap 0.3s ease;
 }
 .sidebar-container.collapsed .footer-row .help-btn {
   order: -1;
@@ -1116,9 +1152,13 @@ body {
   align-items: center;
   gap: 16px;
   padding: var(--space-300);
+  transition: gap 0.3s ease, padding 0.3s ease;
+}
+.sidebar-container:not(.collapsed) .bottom-wrapper {
+  transition: gap 0.3s ease, padding 0.3s ease;
 }
 
-/* Inline styles from React can override the above — keep Search / Recents hidden when collapsed (see side-panel-chi.vercel.app) */
+/* Search / recents hidden when collapsed */
 .sidebar-container.collapsed .search-wrapper,
 .sidebar-container.collapsed #search-results,
 .sidebar-container.collapsed #recent-block {

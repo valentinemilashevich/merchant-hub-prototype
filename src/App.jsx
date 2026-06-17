@@ -21,7 +21,6 @@ import ReportsExportsGlyph from "./assets/icons/reports-exports.svg?react";
 import RouteGlyph from "./assets/icons/route.svg?react";
 import SearchGlyph from "./assets/icons/search.svg?react";
 import HelpCircleGlyph from "./assets/icons/help-circle.svg?react";
-import SidebarCollapseGlyph from "./assets/icons/sidebar-collapse.svg?react";
 import TaxesGlyph from "./assets/icons/taxes.svg?react";
 import ChevronLeftGlyph from "../svg icons/chevron-left.svg?react";
 import {
@@ -3396,6 +3395,8 @@ export default function App() {
   const sidebarContainerRef = useRef(null);
   const navPopoverRef = useRef(null);
   const popoverHideTimer = useRef(null);
+  const [sidebarEdgeHover, setSidebarEdgeHover] = useState(false);
+  const NAV_POPOVER_GAP = 8;
 
   useEffect(() => {
     try {
@@ -3433,17 +3434,27 @@ export default function App() {
       cancelHideNavPopover();
       if (!triggerEl) return;
       const triggerRect = triggerEl.getBoundingClientRect();
-      /** Prefer left edge aligned with anchor; viewport clamp after measure — useLayoutEffect. */
-      const left = triggerRect.left;
+      const left = triggerRect.right + NAV_POPOVER_GAP;
+      const anchorTop = triggerRect.top;
+      const anchorBottom = triggerRect.bottom;
       if (section.type === "item") {
         const centerY = triggerRect.top + triggerRect.height / 2;
-        setNavPopover({ kind: "tooltip", label: section.label, left, centerY });
+        setNavPopover({
+          kind: "tooltip",
+          label: section.label,
+          left,
+          centerY,
+          anchorTop,
+          anchorBottom,
+        });
       } else {
         setNavPopover({
           kind: "menu",
           title: section.label,
           left,
-          top: triggerRect.top,
+          top: anchorTop,
+          anchorTop,
+          anchorBottom,
           items: section.children.map((c) => ({ id: c.id, label: c.label })),
         });
       }
@@ -3454,7 +3465,7 @@ export default function App() {
   useLayoutEffect(() => {
     if (!navPopover || !navPopoverRef.current) return;
     const el = navPopoverRef.current;
-    const margin = 8;
+    const margin = NAV_POPOVER_GAP;
     const pw = el.offsetWidth;
     const ph = el.offsetHeight;
     let left = navPopover.left;
@@ -3463,9 +3474,15 @@ export default function App() {
     const updates = {};
     if (Math.round(left) !== Math.round(navPopover.left)) updates.left = left;
 
+    const anchorTop = navPopover.anchorTop ?? navPopover.top ?? 0;
+    const anchorBottom = navPopover.anchorBottom ?? anchorTop;
+
     if (navPopover.kind === "menu") {
-      let top = navPopover.top;
-      if (top + ph > window.innerHeight - margin) top = window.innerHeight - ph - margin;
+      let top = anchorTop;
+      if (top + ph > window.innerHeight - margin) {
+        const bottomAlignedTop = anchorBottom - ph;
+        top = bottomAlignedTop >= margin ? bottomAlignedTop : window.innerHeight - margin - ph;
+      }
       top = Math.max(margin, top);
       if (Math.abs(top - navPopover.top) > 1) updates.top = top;
     } else if (navPopover.kind === "tooltip") {
@@ -3537,14 +3554,27 @@ export default function App() {
 
   const clearRecent = useCallback(() => setRecentItems([]), []);
 
+  const clearSidebarEdgeHover = useCallback(() => {
+    setSidebarEdgeHover(false);
+  }, []);
+
+  const handleSidebarEdgeEnter = useCallback(() => {
+    setSidebarEdgeHover(true);
+  }, []);
+
+  const handleSidebarEdgeLeave = useCallback(() => {
+    clearSidebarEdgeHover();
+  }, [clearSidebarEdgeHover]);
+
   const toggleSidebarCollapsed = useCallback(() => {
     setSidebarCollapsed((v) => {
       const next = !v;
       if (next) setQuery("");
       return next;
     });
+    clearSidebarEdgeHover();
     hideNavPopover();
-  }, [hideNavPopover]);
+  }, [clearSidebarEdgeHover, hideNavPopover]);
 
   const meta = activeId ? getMetaForId(navSections, activeId) : null;
 
@@ -3552,7 +3582,13 @@ export default function App() {
     <div style={{ display: "flex", flex: 1, minHeight: 0, alignItems: "stretch" }}>
       <div
         ref={sidebarContainerRef}
-        className={`sidebar-container${sidebarCollapsed ? " collapsed" : ""}`}
+        className={[
+          "sidebar-container",
+          sidebarCollapsed ? "collapsed" : "",
+          sidebarEdgeHover ? "is-edge-hover" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
         id="sidebar-container"
       >
         <div className="side-panel" id="side-panel">
@@ -3799,16 +3835,27 @@ export default function App() {
           </div>
         </div>
 
-        <button
-          type="button"
-          className="collapse-btn"
-          id="collapse-btn"
-          aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          aria-expanded={!sidebarCollapsed}
-          onClick={toggleSidebarCollapsed}
+        <div
+          className="sidebar-edge-affordance"
+          onMouseEnter={handleSidebarEdgeEnter}
+          onMouseLeave={handleSidebarEdgeLeave}
         >
-          <SideIcon icon={SidebarCollapseGlyph} size={24} className="collapse-btn-icon" />
-        </button>
+          <button
+            type="button"
+            className="sidebar-edge-rail"
+            id="collapse-btn"
+            aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-expanded={!sidebarCollapsed}
+            onClick={toggleSidebarCollapsed}
+            tabIndex={sidebarEdgeHover ? 0 : -1}
+          >
+            <SideIcon
+              icon={ChevronLeftGlyph}
+              size={16}
+              className={sidebarCollapsed ? "sidebar-edge-rail__icon sidebar-edge-rail__icon--expand" : "sidebar-edge-rail__icon"}
+            />
+          </button>
+        </div>
       </div>
 
       {navPopover && (
