@@ -49,11 +49,13 @@ body {
   overflow: hidden;
   border-right: 1px solid var(--color-dense-900-opacity-300);
   transition:
-    border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    border-width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar-container.is-edge-hover .side-panel {
-  border-right-color: var(--color-dense-900-opacity-600);
+  border-right-width: 1px;
+  border-right-color: var(--color-soft-700);
 }
 
 /* ─────────────────────────────────────────────
@@ -1023,7 +1025,7 @@ body {
   border: none;
   cursor: pointer;
   color: var(--color-dense-900);
-  background-color: var(--color-soft-200);
+  background-color: #f8f8f8;
   border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
   transform: scaleX(0);
   transform-origin: left center;
@@ -1042,6 +1044,10 @@ body {
 
 .sidebar-edge-rail__icon {
   flex-shrink: 0;
+  width: 16px;
+  height: 32px;
+  color: var(--color-dense-100);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1) 0.3s;
 }
 
 .sidebar-edge-rail__icon--expand {

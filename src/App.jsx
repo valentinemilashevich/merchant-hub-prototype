@@ -3146,11 +3146,11 @@ const ICON_GLYPH = {
 };
 
 /** SVG icons from ./assets/icons (vite-plugin-svgr); color via CSS currentColor */
-function SideIcon({ icon, className = "", size = 16 }) {
+function SideIcon({ icon, className = "", size = 16, height }) {
   return createElement(icon, {
     className: ["icon", className].filter(Boolean).join(" "),
     width: size,
-    height: size,
+    height: height ?? size,
     "aria-hidden": true,
   });
 }
@@ -3852,6 +3852,7 @@ export default function App() {
             <SideIcon
               icon={ChevronLeftGlyph}
               size={16}
+              height={32}
               className={sidebarCollapsed ? "sidebar-edge-rail__icon sidebar-edge-rail__icon--expand" : "sidebar-edge-rail__icon"}
             />
           </button>
